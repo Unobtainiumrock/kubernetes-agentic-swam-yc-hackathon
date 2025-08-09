@@ -1,3 +1,58 @@
-.config
-.local
-.kube
+# Kubernetes configuration and cache files
+.kube/cache/
+.bash_history
+
+# Claude AI conversation cache
+.claude/
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Investigation reports (these will be generated at runtime)
+api/investigation_reports/
+api/demo_*.json
+api/autonomous_report_*.txt
+
+# Virtual environments
+venv/
+env/
+.env
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker volumes and build cache
+.dockerignore
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Local development files
+.local/
+.cache/
+.config/
+.config/k8sgpt/
+.config/k9s/
+
+# Node modules (if any)
+node_modules/
+
+# Helm cache
+.helm/
+
+# Kind cluster kubeconfig changes (these are dynamic)
+# Note: We keep the base .kube/config but ignore cache
+.kube/cache/
+.kube/http_cache/

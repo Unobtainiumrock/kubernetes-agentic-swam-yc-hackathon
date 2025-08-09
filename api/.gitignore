@@ -53,3 +53,9 @@ logs/
 .coverage
 .pytest_cache/
 .tox/
+
+# Autonomous Monitor generated files
+investigation_reports/
+demo_*.json
+autonomous_report_*.txt
+*.investigation_report
