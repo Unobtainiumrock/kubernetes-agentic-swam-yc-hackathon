@@ -140,15 +140,10 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "k8sgpt will guide you through the authentication process."
     echo ""
     
-    # Check if k8sgpt CLI is installed
+    # Verify installation
     if ! command -v k8sgpt &> /dev/null; then
-        echo -e "${YELLOW}⚠️  k8sgpt CLI not found. Installing via brew...${NC}"
-        brew install k8sgpt-ai/k8sgpt/k8sgpt || {
-            echo -e "${RED}❌ Failed to install k8sgpt CLI${NC}"
-            echo "Please install manually: https://docs.k8sgpt.ai/getting-started/installation/"
-            echo "Then run: k8sgpt auth"
-            exit 1
-        }
+        echo -e "${RED}❌ k8sgpt installation failed.${NC}"
+        exit 1
     fi
     
     # Run k8sgpt auth
