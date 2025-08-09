@@ -1,4 +1,4 @@
-IMAGE_NAME ?= adk-agent-api:dev
+IMAGE_NAME ?= dfkozlov/adk-agent-api:dev
 ENV_FILE ?= /Users/chalmers/code/kubernetes-agentic-swam-yc-hackathon/google-adk/.env
 ENV_OPT := $(shell [ -f $(ENV_FILE) ] && echo --env-file $(ENV_FILE))
 
@@ -19,3 +19,6 @@ api-stop:
 
 api-clean:
 	docker rmi $(IMAGE_NAME) || true
+
+api-push:
+	docker push $(IMAGE_NAME) || true
