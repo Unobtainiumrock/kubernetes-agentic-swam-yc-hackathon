@@ -29,6 +29,9 @@ run-local:
 	${DOCKER_CMD} run -it --privileged --rm -v /var/run/docker.sock:/var/run/docker.sock --network=host --pull never --name ${CONTAINER_NAME} -e DOCKER_UID=$$(id -u) -e DOCKER_GID=$$(id -g) -v $$(pwd):/root ${TAG_LATEST} bash
 
 exec:
+	${DOCKER_CMD} exec -it ${CONTAINER_NAME} bash
+
+exec-user:
 	${DOCKER_CMD} exec -it -u $$(id -u):$$(id -g) ${CONTAINER_NAME} bash
 
 
