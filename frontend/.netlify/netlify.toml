@@ -1,0 +1,59 @@
+redirectsOrigin = "config"
+plugins = []
+headers = []
+
+[dev]
+framework = "vite"
+command = "npm run dev"
+targetPort = 3000.0
+port = 8888.0
+
+[functions]
+
+[functions."*"]
+
+[build]
+publish = "/home/unobtainium/Desktop/github/yc/frontend/dist"
+publishOrigin = "config"
+commandOrigin = "config"
+base = "/home/unobtainium/Desktop/github/yc/frontend"
+command = "npm run build"
+
+[build.environment]
+NODE_VERSION = "18"
+
+[build.processing]
+
+[build.processing.css]
+
+[build.processing.html]
+
+[build.processing.images]
+
+[build.processing.js]
+
+[build.services]
+
+[[redirects]]
+from = "/api/*"
+to = "/.netlify/functions/api/:splat"
+status = 200.0
+force = false
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/*"
+to = "/index.html"
+status = 200.0
+force = false
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]

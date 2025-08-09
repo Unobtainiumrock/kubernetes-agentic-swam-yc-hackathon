@@ -1,0 +1,1 @@
+{"functions":[{"bundler":"zisi","buildData":{"runtimeAPIVersion":1},"mainFile":"/home/unobtainium/Desktop/github/yc/netlify/functions/adk.js","name":"adk","priority":10,"runtimeVersion":"nodejs20.x","path":"/home/unobtainium/Desktop/github/yc/frontend/.netlify/functions/adk.zip","runtime":"js"}],"system":{"arch":"x64","platform":"linux"},"timestamp":1754779575196,"version":1}
