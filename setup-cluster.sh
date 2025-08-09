@@ -140,69 +140,11 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "k8sgpt will guide you through the authentication process."
     echo ""
     
-    # Check if k8sgpt CLI is installed
-    if ! command -v k8sgpt &> /dev/null; then
-        echo -e "${YELLOW}⚠️  k8sgpt CLI not found. Installing via brew...${NC}"
-        brew install k8sgpt-ai/k8sgpt/k8sgpt || {
-            echo -e "${RED}❌ Failed to install k8sgpt CLI${NC}"
-            echo "Please install manually: https://docs.k8sgpt.ai/getting-started/installation/"
-            echo "Then run: k8sgpt auth"
-            exit 1
-        }
-    fi
-
-    if ! command -v k8sgpt &> /dev/null; then
-    echo -e "${YELLOW}⚠️  k8sgpt CLI not found. Attempting to install...${NC}"
-
-    # --- OS-specific installation ---
-    # Check for macOS
-    if [[ "$(uname)" == "Darwin" ]]; then
-        echo "Detected macOS. Installing via Homebrew..."
-        brew install k8sgpt-ai/k8sgpt/k8sgpt || {
-            echo -e "${RED}❌ Failed to install k8sgpt via Homebrew.${NC}"
-            echo "Please try installing manually: https://docs.k8sgpt.ai/getting-started/installation/"
-            echo "After installation, run: k8sgpt auth"
-            exit 1
-        }
-    # Check for Debian-based Linux (e.g., Ubuntu)
-    elif [ -x "$(command -v dpkg)" ]; then
-        echo "Detected Debian-based Linux. Installing via .deb package..."
-        K8SGPT_VERSION="v0.4.22"
-        K8SGPT_DEB="k8sgpt_amd64.deb"
-
-        # Download the .deb package
-        curl -LO "https://github.com/k8sgpt-ai/k8sgpt/releases/download/${K8SGPT_VERSION}/${K8SGPT_DEB}" || {
-            echo -e "${RED}❌ Failed to download k8sgpt .deb package.${NC}"
-            exit 1
-        }
-
-        # Install the package using dpkg
-        sudo dpkg -i "${K8SGPT_DEB}" || {
-            echo -e "${RED}❌ Failed to install k8sgpt via dpkg.${NC}"
-            echo "Please try installing manually: https://docs.k8sgpt.ai/getting-started/installation/"
-            echo "After installation, run: k8sgpt auth"
-            # Attempt to clean up the downloaded file
-            rm -f "${K8SGPT_DEB}"
-            exit 1
-        }
-
-        # Clean up the downloaded .deb file on success
-        rm -f "${K8SGPT_DEB}"
-    else
-        echo -e "${RED}❌ Unsupported operating system for automatic installation.${NC}"
-        echo "Please install k8sgpt manually from the official documentation:"
-        echo "https://docs.k8sgpt.ai/getting-started/installation/"
-        echo "Then run: k8sgpt auth"
-        exit 1
-    fi
-
     # Verify installation
     if ! command -v k8sgpt &> /dev/null; then
         echo -e "${RED}❌ k8sgpt installation failed.${NC}"
         exit 1
     fi
-   fi
-
     
     # Run k8sgpt auth
     k8sgpt auth
