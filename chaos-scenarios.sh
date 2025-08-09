@@ -28,51 +28,54 @@ show_menu() {
     echo ""
 }
 
-pod_failure_simulation() {
-    echo -e "${RED}💥 Simulating Pod Failures${NC}"
-    echo "Randomly killing pods across different namespaces..."
+# pod_failure_simulation() {
+#     echo -e "${RED}💥 Simulating Pod Failures${NC}"
+#     echo "Randomly killing pods across different namespaces..."
     
-    # Kill random frontend pods
-    FRONTEND_PODS=($(kubectl get pods -n frontend -o name | head -2))
-    for pod in "${FRONTEND_PODS[@]}"; do
-        echo "Deleting $pod"
-        kubectl delete "$pod" -n frontend &
-    done
-    
-    # Kill random backend pods
-    BACKEND_PODS=($(kubectl get pods -n backend -o name | head -2))
-    for pod in "${BACKEND_PODS[@]}"; do
-        echo "Deleting $pod"
-        kubectl delete "$pod" -n backend &
-    done
-    
-    wait
-    echo -e "${YELLOW}⏳ Waiting for pods to recover...${NC}"
-    sleep 10
-    kubectl get pods --all-namespaces | grep -E "(frontend|backend)"
-}
 
-node_drain_simulation() {
-    echo -e "${RED}🚫 Simulating Node Drain${NC}"
+#     # Kill random frontend pods
+#     FRONTEND_PODS=($(kubectl get pods -n frontend --no-headers -o custom-columns=":metadata.name" | grep '^frontend-app' | head -2))
+#     for pod in "${FRONTEND_PODS[@]}"; do
+#         echo "Deleting $pod"
+#         kubectl delete pod "$pod" -n frontend &
+#     done
+#     wait
+
     
-    # Get a worker node
-    NODE=$(kubectl get nodes -o name | grep -v control-plane | head -1 | cut -d'/' -f2)
+    # # Kill random backend pods
+    # BACKEND_PODS=($(kubectl get pods -n backend -o name | head -2))
+    # for pod in "${BACKEND_PODS[@]}"; do
+    #     echo "Deleting $pod"
+    #     kubectl delete "$pod" -n backend &
+    # done
     
-    if [ -z "$NODE" ]; then
-        echo -e "${RED}No worker nodes found!${NC}"
-        return 1
-    fi
+#     wait
+#     echo -e "${YELLOW}⏳ Waiting for pods to recover...${NC}"
+#     sleep 10
+#     kubectl get pods --all-namespaces | grep -E "(frontend|backend)"
+# }
+
+# node_drain_simulation() {
+#     echo -e "${RED}🚫 Simulating Node Drain${NC}"
     
-    echo "Draining node: $NODE"
-    kubectl cordon "$NODE"
-    kubectl drain "$NODE" --ignore-daemonsets --delete-emptydir-data --force --grace-period=30
+#     # Get a worker node
+#     NODE=$(kubectl get nodes -o name | grep -v control-plane | head -1 | cut -d'/' -f2)
     
-    echo -e "${YELLOW}Node $NODE is now drained. Pods should reschedule to other nodes.${NC}"
-    echo "Run option 8 (Recovery) to uncordon the node."
+#     if [ -z "$NODE" ]; then
+#         echo -e "${RED}No worker nodes found!${NC}"
+#         return 1
+#     fi
     
-    sleep 5
-    kubectl get pods --all-namespaces -o wide | grep -v Running || true
-}
+#     echo "Draining node: $NODE"
+#     kubectl cordon "$NODE"
+#     kubectl drain "$NODE" --ignore-daemonsets --delete-emptydir-data --force --grace-period=30
+    
+#     echo -e "${YELLOW}Node $NODE is now drained. Pods should reschedule to other nodes.${NC}"
+#     echo "Run option 8 (Recovery) to uncordon the node."
+    
+#     sleep 5
+#     kubectl get pods --all-namespaces -o wide | grep -v Running || true
+# }
 
 resource_pressure_simulation() {
     echo -e "${RED}🔥 Creating Resource Pressure${NC}"
@@ -160,40 +163,40 @@ storage_failure_simulation() {
     kubectl get pods -n database
 }
 
-rolling_update_failure() {
-    echo -e "${RED}🔄 Simulating Failed Rolling Update${NC}"
+# rolling_update_failure() {
+#     echo -e "${RED}🔄 Simulating Failed Rolling Update${NC}"
     
-    # Update frontend with a bad image
-    kubectl patch deployment frontend-app -n frontend -p='{"spec":{"template":{"spec":{"containers":[{"name":"nginx","image":"nginx:bad-tag"}]}}}}'
+#     # Update frontend with a bad image
+#     kubectl patch deployment frontend-app -n frontend -p='{"spec":{"template":{"spec":{"containers":[{"name":"nginx","image":"nginx:bad-tag"}]}}}}'
     
-    echo -e "${YELLOW}Rolling update initiated with bad image. Deployment will fail.${NC}"
-    sleep 10
-    kubectl rollout status deployment/frontend-app -n frontend --timeout=60s || true
-    kubectl get pods -n frontend
-}
+#     echo -e "${YELLOW}Rolling update initiated with bad image. Deployment will fail.${NC}"
+#     sleep 10
+#     kubectl rollout status deployment/frontend-app -n frontend --timeout=60s || true
+#     kubectl get pods -n frontend
+# }
 
-cascading_failure() {
-    echo -e "${RED}💀 Simulating Cascading Failure${NC}"
+# cascading_failure() {
+#     echo -e "${RED}💀 Simulating Cascading Failure${NC}"
     
-    echo "Step 1: Database failure"
-    kubectl scale statefulset database-app --replicas=0 -n database
-    sleep 5
+#     echo "Step 1: Database failure"
+#     kubectl scale statefulset database-app --replicas=0 -n database
+#     sleep 5
     
-    echo "Step 2: Backend overload (scaling up to simulate traffic)"
-    kubectl scale deployment backend-app --replicas=8 -n backend
-    sleep 5
+#     echo "Step 2: Backend overload (scaling up to simulate traffic)"
+#     kubectl scale deployment backend-app --replicas=8 -n backend
+#     sleep 5
     
-    echo "Step 3: Resource exhaustion"
-    kubectl scale deployment cpu-stress --replicas=4 -n monitoring
-    sleep 5
+#     echo "Step 3: Resource exhaustion"
+#     kubectl scale deployment cpu-stress --replicas=4 -n monitoring
+#     sleep 5
     
-    echo "Step 4: Frontend instability"
-    kubectl patch deployment frontend-app -n frontend -p='{"spec":{"template":{"spec":{"containers":[{"name":"nginx","resources":{"limits":{"memory":"50Mi"}}}]}}}}'
+#     echo "Step 4: Frontend instability"
+#     kubectl patch deployment frontend-app -n frontend -p='{"spec":{"template":{"spec":{"containers":[{"name":"nginx","resources":{"limits":{"memory":"50Mi"}}}]}}}}'
     
-    echo -e "${YELLOW}Cascading failure initiated. Multiple systems affected.${NC}"
-    sleep 10
-    kubectl get pods --all-namespaces | grep -v Running || true
-}
+#     echo -e "${YELLOW}Cascading failure initiated. Multiple systems affected.${NC}"
+#     sleep 10
+#     kubectl get pods --all-namespaces | grep -v Running || true
+# }
 
 recovery_demonstration() {
     echo -e "${GREEN}🔧 Initiating Recovery Procedures${NC}"
