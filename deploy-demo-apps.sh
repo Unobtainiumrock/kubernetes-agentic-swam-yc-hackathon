@@ -155,7 +155,7 @@ EOF
 echo -e "${BLUE}🗄️ Deploying Database Application...${NC}"
 cat <<EOF | kubectl apply -f -
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
   name: database-app
   namespace: database
@@ -163,7 +163,6 @@ metadata:
     app: database
     tier: database
 spec:
-  serviceName: database-service
   replicas: 2
   selector:
     matchLabels:
@@ -183,22 +182,11 @@ spec:
         - containerPort: 6379
         resources:
           requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
             memory: "256Mi"
             cpu: "200m"
-          limits:
-            memory: "512Mi"
-            cpu: "400m"
-        volumeMounts:
-        - name: data
-          mountPath: /data
-  volumeClaimTemplates:
-  - metadata:
-      name: data
-    spec:
-      accessModes: ["ReadWriteOnce"]
-      resources:
-        requests:
-          storage: 1Gi
 ---
 apiVersion: v1
 kind: Service
@@ -211,7 +199,7 @@ spec:
   ports:
   - port: 6379
     targetPort: 6379
-  clusterIP: None
+  type: ClusterIP
 EOF
 
 # Deploy Cache Application (Memcached)
@@ -299,55 +287,28 @@ spec:
             cpu: "500m"
 EOF
 
-# Create HPA for backend application
-echo -e "${BLUE}📈 Creating Horizontal Pod Autoscaler...${NC}"
-cat <<EOF | kubectl apply -f -
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: backend-hpa
-  namespace: backend
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: backend-app
-  minReplicas: 2
-  maxReplicas: 8
-  metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 70
-  - type: Resource
-    resource:
-      name: memory
-      target:
-        type: Utilization
-        averageUtilization: 80
-EOF
+# Note: HPA requires metrics server which may take time to be ready
+# For demo purposes, we'll skip HPA initially
+echo -e "${YELLOW}📈 Skipping HPA for faster deployment (can be added later)...${NC}"
 
 # Wait for deployments to be ready
 echo -e "${YELLOW}⏳ Waiting for applications to be ready...${NC}"
-kubectl wait --for=condition=available --timeout=300s deployment/frontend-app -n frontend
-kubectl wait --for=condition=available --timeout=300s deployment/backend-app -n backend
-kubectl wait --for=condition=available --timeout=300s deployment/cache-app -n backend
-kubectl wait --for=condition=ready --timeout=300s statefulset/database-app -n database
+kubectl wait --for=condition=available --timeout=180s deployment/frontend-app -n frontend
+kubectl wait --for=condition=available --timeout=180s deployment/backend-app -n backend
+kubectl wait --for=condition=available --timeout=180s deployment/cache-app -n backend
+kubectl wait --for=condition=available --timeout=180s deployment/database-app -n database
 
 echo -e "${GREEN}✅ All demo applications deployed successfully!${NC}"
 echo ""
 echo -e "${BLUE}📋 Deployed Applications:${NC}"
 echo "   Frontend: 3 replicas (NGINX) in frontend namespace"
 echo "   Backend: 4 replicas (Apache) in backend namespace"
-echo "   Database: 2 replicas (Redis StatefulSet) in database namespace"
+echo "   Database: 2 replicas (Redis) in database namespace"
 echo "   Cache: 2 replicas (Memcached) in backend namespace"
 echo "   CPU Stress: 1 replica for load testing"
-echo "   HPA: Auto-scaling enabled for backend (2-8 replicas)"
 echo ""
 echo -e "${BLUE}🔧 Useful Commands:${NC}"
 echo "   kubectl get pods --all-namespaces"
-echo "   kubectl get hpa -n backend"
+echo "   kubectl get services --all-namespaces"
 echo "   kubectl top nodes"
 echo "   kubectl top pods --all-namespaces"
