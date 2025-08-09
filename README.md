@@ -1,8 +1,165 @@
-# Kubernetes Demo Environment with Kind
+# Agentic Kubernetes Operator Demo
 
-This repository contains infrastructure as code to create a medium complex Kubernetes environment using Kind (Kubernetes in Docker) for demonstrating pod failures, node crashes, and various chaos engineering scenarios.
+This repository provides the complete environment to demonstrate an AI-based agentic operator managing a Kubernetes cluster. The system uses Kind (Kubernetes in Docker) to simulate a multi-node environment, injects failures using chaos engineering principles, and visualizes the AI agents' response in real-time.
 
-## 🏗️ Architecture
+## 🏛️ System Architecture Overview
+
+The architecture is designed with clear separation of concerns: the **Frontend Dashboard** (our window into the system), the **Backend Orchestrator** (demo coordination and chaos injection), the **AI Agent Swarm** (autonomous healing system), and the **Kubernetes Cluster** (the environment being managed). 
+
+**Key Principle**: The orchestrator creates problems, the agents solve them - simulating real-world scenarios where external issues occur and AI systems respond autonomously.
+
+### Level 1: High-Level System Components
+
+This diagram shows the primary components and their basic relationships. The user interacts with the UI, which is powered by the Backend Orchestrator. The Orchestrator manages a swarm of AI agents, which monitor and heal the cluster, while the orchestrator can inject controlled failures for demonstration purposes.
+
+```mermaid
+graph TB
+    subgraph "Frontend Layer"
+        UI["📈 React Dashboard"]
+    end
+
+    subgraph "Backend Layer"
+        Orchestrator["🐍 FastAPI Orchestrator<br/>Demo Control & Chaos Injection"]
+    end
+
+    subgraph "Agent Layer"
+        Swarm["🤖 AI Agent Swarm<br/>Autonomous Healing System"]
+    end
+
+    subgraph "Infrastructure Layer"
+        K8s["☸️ Kubernetes Cluster<br/>(Kind)"]
+    end
+
+    UI <-->|WebSocket Stream| Orchestrator
+    Orchestrator -.->|Task Assignment| Swarm
+    Swarm <-->|Monitor & Heal| K8s
+    Orchestrator -->|Chaos Injection| K8s
+
+    classDef frontend fill:#d3e5ef,stroke:#333,stroke-width:2px
+    classDef backend fill:#e5f5e0,stroke:#333,stroke-width:2px
+    classDef agent fill:#f9d5e5,stroke:#333,stroke-width:2px
+    classDef infra fill:#fcf3cf,stroke:#333,stroke-width:2px
+
+    class UI frontend
+    class Orchestrator backend
+    class Swarm agent
+    class K8s infra
+```
+
+### Level 2: Agent & Cluster Interaction Workflow
+
+This level details the workflow with **clear separation of concerns**. The **Backend Orchestrator** manages the demo and injects failures for testing, while the **AI Agents** act as the autonomous healing system. The orchestrator creates problems, and the agents solve them naturally - just like they would in a real production environment where they don't know about the source of failures.
+
+```mermaid
+graph LR
+    subgraph "Frontend"
+        UI["📈 React Dashboard"]
+    end
+
+    subgraph "Backend Orchestrator"
+        Orchestrator["🐍 FastAPI Orchestrator"]
+        ChaosEngine["💥 Chaos Engine"]
+    end
+
+    subgraph "Agent Layer"
+        Agent["🤖 AI Agent<br/>(Autonomous Healer)"]
+    end
+
+    subgraph "Kubernetes Environment"
+       K8sAPI["☸️ K8s API Server"]
+       ClusterNodes["Nodes & Pods"]
+    end
+
+    subgraph "Tooling"
+        Tools["kubectl, k8sgpt, etc."]
+    end
+
+    UI <-.->|WebSocket Stream| Orchestrator
+    
+    %% Orchestrator manages demo and chaos
+    Orchestrator --> ChaosEngine
+    ChaosEngine -- "1. Injects Failure<br/>(kubectl delete pod)" --> K8sAPI
+    
+    %% Agent operates independently 
+    Agent -- "2. Detects Issues<br/>(kubectl get pods)" --> Tools
+    Agent -- "3. Analyzes with AI<br/>(k8sgpt analyze)" --> Tools
+    Tools -- "4. Queries cluster state" --> K8sAPI
+    K8sAPI -- "5. Returns cluster state" --> Tools
+    Tools -- "6. Returns diagnosis" --> Agent
+    
+    Agent -- "7. Executes Healing<br/>(kubectl scale, restart)" --> Tools
+    Agent -- "8. Streams Status/Actions" --> Orchestrator
+
+    K8sAPI -- "State Changes" --> ClusterNodes
+
+    classDef ui fill:#d3e5ef,stroke:#333,stroke-width:1px
+    classDef backend fill:#e5f5e0,stroke:#333,stroke-width:1px
+    classDef chaos fill:#ffcccb,stroke:#333,stroke-width:1px
+    classDef agent fill:#f9d5e5,stroke:#333,stroke-width:1px
+    classDef k8s fill:#fcf3cf,stroke:#333,stroke-width:1px
+    classDef tools fill:#eeeeee,stroke:#333,stroke-width:1px
+
+    class UI ui
+    class Orchestrator backend
+    class ChaosEngine chaos
+    class Agent agent
+    class K8sAPI,ClusterNodes k8s
+    class Tools tools
+```
+
+### Level 3: Data Endpoints for Frontend Dashboard
+
+This diagram focuses specifically on the data contract between the backend and the frontend. The dashboard is a "dumb" client that renders state provided by the FastAPI server. Communication is primarily handled via WebSockets for real-time updates, with auxiliary data fetched via standard REST APIs.
+
+```mermaid
+graph TD
+    subgraph "Frontend Components"
+        A["📊 Agent Status Grid"]
+        B["📋 Live Log Stream"]
+        C["🌐 Cluster View (kube-ops-view style)"]
+        D["📈 Metrics Panel"]
+    end
+
+    subgraph "Backend Data Sources"
+        E["FastAPI Server"]
+    end
+
+    subgraph "WebSocket Channels"
+        WS1["/ws/agent-status"]
+        WS2["/ws/cluster-events"]
+        WS3["/ws/global-metrics"]
+    end
+
+    subgraph "REST Endpoints"
+        R1["GET /api/agents/history"]
+        R2["POST /api/chaos/inject"]
+        R3["GET /api/cluster/snapshot"]
+    end
+
+    E -->|Pushes Agent Updates| WS1 --> A
+    E -->|Streams Logs & Events| WS2 --> B
+    E -->|Pushes Metrics| WS3 --> D
+
+    A -->|Fetch historical logs| R1
+    C -->|Get initial state| R3
+    A -->|User Action: Inject Failure| R2
+
+    R1 --> E
+    R2 --> E
+    R3 --> E
+
+    classDef frontend fill:#d3e5ef,stroke:#333,stroke-width:1px
+    classDef backend fill:#e5f5e0,stroke:#333,stroke-width:1px
+    classDef ws fill:#f9d5e5,stroke:#333,stroke-width:1px,stroke-dasharray: 5 5
+    classDef rest fill:#fcf3cf,stroke:#333,stroke-width:1px,stroke-dasharray: 5 5
+
+    class A,B,C,D frontend
+    class E backend
+    class WS1,WS2,WS3 ws
+    class R1,R2,R3 rest
+```
+
+## 🏗️ Kubernetes Cluster Architecture
 
 The demo cluster includes:
 - **1 Control Plane Node** with ingress capabilities
@@ -16,9 +173,59 @@ The demo cluster includes:
 
 Before running this demo, ensure you have the following installed:
 
+### Docker
 - [Docker](https://docs.docker.com/get-docker/) - Must be running
-- [Kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation) - `brew install kind`
-- [kubectl](https://kubernetes.io/docs/tasks/tools/) - `brew install kubectl`
+
+### Kind (Kubernetes in Docker)
+
+**macOS:**
+```bash
+brew install kind
+```
+
+**Linux:**
+```bash
+# For AMD64 / x86_64
+[ $(uname -m) = x86_64 ] && curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
+# For ARM64
+[ $(uname -m) = aarch64 ] && curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-arm64
+chmod +x ./kind
+sudo mv ./kind /usr/local/bin/kind
+```
+
+**Windows:**
+```powershell
+# Using Chocolatey
+choco install kind
+
+# Or download binary directly
+curl.exe -Lo kind-windows-amd64.exe https://kind.sigs.k8s.io/dl/v0.20.0/kind-windows-amd64
+Move-Item .\kind-windows-amd64.exe c:\some-dir-in-your-PATH\kind.exe
+```
+
+### kubectl
+
+**macOS:**
+```bash
+brew install kubectl
+```
+
+**Linux:**
+```bash
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+chmod +x kubectl
+sudo mv kubectl /usr/local/bin/
+```
+
+**Windows:**
+```powershell
+# Using Chocolatey
+choco install kubernetes-cli
+
+# Or using PowerShell
+curl.exe -LO "https://dl.k8s.io/release/v1.28.0/bin/windows/amd64/kubectl.exe"
+# Move kubectl.exe to a directory in your PATH
+```
 
 ## 🚀 Quick Start
 
