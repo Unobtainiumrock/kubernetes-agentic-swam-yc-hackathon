@@ -48,6 +48,8 @@ RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/doc
 
 RUN  apt-get install docker-ce-cli docker-buildx-plugin docker-compose-plugin
 
+RUN wget https://github.com/derailed/k9s/releases/latest/download/k9s_linux_amd64.deb && dpkg -i k9s_linux_amd64.deb && rm k9s_linux_amd64.deb
+
 #RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && \
 #    useradd -m user -d /root -s /bin/bash && echo "user:user" | chpasswd && \
 #    adduser user sudo && \
