@@ -34,6 +34,13 @@ if ! command -v kubectl &> /dev/null; then
     exit 1
 fi
 
+# Check if helm is installed
+if ! command -v helm &> /dev/null; then
+    echo -e "${RED}❌ Helm is not installed. Please install it first:${NC}"
+    echo "   brew install helm"
+    exit 1
+fi
+
 # Check if Docker is running
 if ! docker info &> /dev/null; then
     echo -e "${RED}❌ Docker is not running. Please start Docker first.${NC}"
@@ -75,12 +82,34 @@ kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/late
 kubectl patch deployment metrics-server -n kube-system --type='json' \
   -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]'
 
+# Install k8sgpt-operator via Helm
+echo -e "${BLUE}🤖 Installing k8sgpt-operator...${NC}"
+helm repo add k8sgpt https://charts.k8sgpt.ai/ || true
+helm repo update
+
+# Install k8sgpt-operator using local chart if available, otherwise from repo
+if [[ -d "k8sgpt-operator" ]]; then
+    echo -e "${YELLOW}📁 Using local k8sgpt-operator chart...${NC}"
+    helm install k8sgpt-operator ./k8sgpt-operator -n k8sgpt-operator-system --create-namespace
+else
+    echo -e "${YELLOW}📦 Using k8sgpt-operator from Helm repository...${NC}"
+    helm install k8sgpt-operator k8sgpt/k8sgpt-operator -n k8sgpt-operator-system --create-namespace
+fi
+
+# Wait for k8sgpt-operator to be ready
+echo -e "${YELLOW}⏳ Waiting for k8sgpt-operator to be ready...${NC}"
+kubectl wait --namespace k8sgpt-operator-system \
+  --for=condition=ready pod \
+  --selector=control-plane=controller-manager \
+  --timeout=300s
+
 echo -e "${GREEN}✅ Cluster setup complete!${NC}"
 echo ""
 echo -e "${BLUE}📋 Cluster Information:${NC}"
 echo "   Cluster Name: ${CLUSTER_NAME}"
 echo "   Nodes: $(kubectl get nodes --no-headers | wc -l | tr -d ' ')"
 echo "   Context: kind-${CLUSTER_NAME}"
+echo "   k8sgpt-operator: Installed in k8sgpt-operator-system namespace"
 echo ""
 echo -e "${BLUE}🔧 Useful Commands:${NC}"
 echo "   kubectl get nodes -o wide"
