@@ -147,7 +147,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     fi
     
     # Run k8sgpt auth
-    k8sgpt auth
+    yes | k8sgpt auth
     
     echo ""
     echo -e "${GREEN}✅ k8sgpt authentication completed!${NC}"
