@@ -1,0 +1,13 @@
+k9s:
+  cluster: kind-demo-cluster
+  namespace:
+    active: all
+    lockFavorites: false
+    favorites:
+      - all
+      - default
+  view:
+    active: pod all
+  featureGates:
+    nodeShell: false
+  proxy: null

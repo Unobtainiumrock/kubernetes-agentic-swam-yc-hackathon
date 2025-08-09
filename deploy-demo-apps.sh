@@ -289,7 +289,85 @@ EOF
 
 # Note: HPA requires metrics server which may take time to be ready
 # For demo purposes, we'll skip HPA initially
-echo -e "${YELLOW}📈 Skipping HPA for faster deployment (can be added later)...${NC}"
+# echo -e "${YELLOW}📈 Skipping HPA for faster deployment (can be added later)...${NC}"
+
+# Deploy problematic pods for failure demonstration
+echo -e "${YELLOW}🚨 Deploying problematic pods for failure scenarios...${NC}"
+
+# Pod with ImagePullBackOff (bad image tag)
+cat <<EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: broken-image-app
+  namespace: frontend
+  labels:
+    app: broken-image-app
+    tier: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: broken-image-app
+  template:
+    metadata:
+      labels:
+        app: broken-image-app
+        tier: frontend
+    spec:
+      containers:
+      - name: broken-app
+        image: nginx:nonexistent-tag-12345
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "50m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+EOF
+
+# Pod with CrashLoopBackOff (exits immediately)
+cat <<EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crash-loop-app
+  namespace: frontend
+  labels:
+    app: crash-loop-app
+    tier: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crash-loop-app
+  template:
+    metadata:
+      labels:
+        app: crash-loop-app
+        tier: frontend
+    spec:
+      containers:
+      - name: crash-app
+        image: busybox:1.35
+        command: ["/bin/sh"]
+        args: ["-c", "echo 'Starting application...' && echo 'Critical error occurred!' && exit 1"]
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "25m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+EOF
+
+echo -e "${RED}⚠️  Problematic pods deployed:${NC}"
+echo "   • broken-image-app: Will show ImagePullBackOff status"
+echo "   • crash-loop-app: Will show CrashLoopBackOff status"
+echo ""
 
 # Wait for deployments to be ready
 echo -e "${YELLOW}⏳ Waiting for applications to be ready...${NC}"

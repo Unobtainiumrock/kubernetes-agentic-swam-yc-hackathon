@@ -1,0 +1,14 @@
+[2m2025-08-09T21:47:26Z[0m [92mINF[0m 🐶 K9s starting up...
+[2m2025-08-09T21:47:26Z[0m [92mINF[0m ✅ Kubernetes connectivity OK
+[2m2025-08-09T21:47:26Z[0m [92mINF[0m [CONFIG] Saving K9s config to disk [2mpath=[0m/root/.config/k9s/config.yaml
+[2m2025-08-09T21:47:26Z[0m [93mWRN[0m Fail to load global/context configuration [2merror=[0m"unable to locate associated cluster for context \"\": getcontext - invalid context specified: \"\""
+[2m2025-08-09T21:47:27Z[0m [93mWRN[0m k9s latest rev fetch failed [2merror=[0m"no version found"
+[2m2025-08-09T21:47:27Z[0m [93mWRN[0m k9s latest rev fetch failed [2merror=[0m"no version found"
+[2m2025-08-09T21:47:27Z[0m [93mWRN[0m k9s latest rev fetch failed [2merror=[0m"no version found"
+[2m2025-08-09T21:47:29Z[0m [93mWRN[0m No resources found for v1/pods in namespace default
+[2m2025-08-09T21:50:27Z[0m [92mINF[0m 🐶 K9s starting up...
+[2m2025-08-09T21:50:27Z[0m [92mINF[0m ✅ Kubernetes connectivity OK
+[2m2025-08-09T21:50:27Z[0m [93mWRN[0m k9s latest rev fetch failed [2merror=[0m"no version found"
+[2m2025-08-09T21:50:27Z[0m [93mWRN[0m k9s latest rev fetch failed [2merror=[0m"no version found"
+[2m2025-08-09T21:50:27Z[0m [93mWRN[0m k9s latest rev fetch failed [2merror=[0m"no version found"
+[2m2025-08-09T21:50:35Z[0m [93mWRN[0m Log stream canceled

@@ -2,6 +2,13 @@
 
 # Chaos Engineering Scenarios for Kubernetes Demo
 # This script provides various failure simulation scenarios
+# 
+# Usage:
+#   ./chaos-scenarios.sh                    # Interactive mode
+#   ./chaos-scenarios.sh [scenario-number]  # Direct execution
+#   ./chaos-scenarios.sh 3                  # Launch resource pressure
+#   ./chaos-scenarios.sh status              # Show current status
+#   ./chaos-scenarios.sh cleanup             # Clean up all chaos
 
 set -e
 
@@ -78,45 +85,129 @@ show_menu() {
 # }
 
 resource_pressure_simulation() {
-    echo -e "${RED}🔥 Creating Resource Pressure${NC}"
+    echo -e "${RED}🔥 Creating AGGRESSIVE Resource Pressure${NC}"
+    echo "This will create significant stress that should impact demo applications..."
     
-    # Scale up CPU stress
-    kubectl scale deployment cpu-stress --replicas=3 -n monitoring
+    # Scale up existing CPU stress to maximum
+    echo -e "${YELLOW}📈 Scaling up existing CPU stress deployment...${NC}"
+    kubectl scale deployment cpu-stress --replicas=8 -n monitoring 2>/dev/null || echo "CPU stress deployment not found, creating new one..."
     
-    # Create memory pressure
+    # Create multiple aggressive stress deployments
+    echo -e "${YELLOW}💾 Creating aggressive memory pressure (will consume ~2GB per node)...${NC}"
     cat <<EOF | kubectl apply -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: memory-stress
+  name: memory-bomb
   namespace: monitoring
 spec:
-  replicas: 2
+  replicas: 6
   selector:
     matchLabels:
-      app: memory-stress
+      app: memory-bomb
   template:
     metadata:
       labels:
-        app: memory-stress
+        app: memory-bomb
     spec:
       containers:
       - name: stress
         image: polinux/stress
         command: ["stress"]
-        args: ["--vm", "1", "--vm-bytes", "150M", "--timeout", "300s"]
+        args: ["--vm", "2", "--vm-bytes", "400M", "--vm-hang", "0", "--timeout", "600s"]
+        resources:
+          requests:
+            memory: "300Mi"
+            cpu: "200m"
+          limits:
+            memory: "500Mi"
+            cpu: "500m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cpu-bomb
+  namespace: monitoring
+spec:
+  replicas: 8
+  selector:
+    matchLabels:
+      app: cpu-bomb
+  template:
+    metadata:
+      labels:
+        app: cpu-bomb
+    spec:
+      containers:
+      - name: stress
+        image: polinux/stress
+        command: ["stress"]
+        args: ["--cpu", "2", "--timeout", "600s", "--verbose"]
+        resources:
+          requests:
+            memory: "50Mi"
+            cpu: "400m"
+          limits:
+            memory: "100Mi"
+            cpu: "800m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: io-bomb
+  namespace: monitoring
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: io-bomb
+  template:
+    metadata:
+      labels:
+        app: io-bomb
+    spec:
+      containers:
+      - name: stress
+        image: polinux/stress
+        command: ["stress"]
+        args: ["--io", "4", "--hdd", "2", "--hdd-bytes", "100M", "--timeout", "600s"]
         resources:
           requests:
             memory: "100Mi"
-            cpu: "100m"
+            cpu: "200m"
           limits:
             memory: "200Mi"
-            cpu: "200m"
+            cpu: "400m"
 EOF
     
-    echo -e "${YELLOW}⏳ Resource pressure created. Monitor with 'kubectl top nodes'${NC}"
-    sleep 5
-    kubectl top nodes 2>/dev/null || echo "Metrics may take a moment to appear"
+    echo -e "${RED}⚠️  AGGRESSIVE RESOURCE PRESSURE DEPLOYED!${NC}"
+    echo -e "${YELLOW}This will create:${NC}"
+    echo "  • 6 memory-bomb pods consuming ~400MB each (2.4GB total)"
+    echo "  • 8 cpu-bomb pods consuming 2 CPU cores each"
+    echo "  • 4 io-bomb pods creating disk I/O pressure"
+    echo "  • Plus scaled CPU stress deployment"
+    echo ""
+    echo -e "${RED}Expected effects:${NC}"
+    echo "  • Node resource exhaustion"
+    echo "  • Pod evictions due to memory pressure"
+    echo "  • Application slowdowns and potential crashes"
+    echo "  • Kubernetes scheduler stress"
+    echo ""
+    echo -e "${YELLOW}⏳ Monitoring cluster state...${NC}"
+    
+    # Show immediate impact
+    sleep 10
+    echo -e "${BLUE}📊 Current resource usage:${NC}"
+    kubectl top nodes 2>/dev/null || echo "Metrics loading..."
+    echo ""
+    echo -e "${BLUE}🔍 Checking for pod evictions:${NC}"
+    kubectl get events --sort-by='.lastTimestamp' | grep -E '(Evicted|FailedScheduling|OutOfMemory)' | tail -5 || echo "No evictions yet..."
+    echo ""
+    echo -e "${YELLOW}💡 Monitor with:${NC}"
+    echo "  kubectl top nodes"
+    echo "  kubectl get pods --all-namespaces | grep -E '(Evicted|Pending|Error)'"
+    echo "  kubectl get events --sort-by='.lastTimestamp' | tail -10"
+    echo "  watch 'kubectl get pods --all-namespaces'"
 }
 
 network_partition_simulation() {
@@ -253,12 +344,9 @@ show_status() {
     kubectl get services --all-namespaces
 }
 
-# Main menu loop
-while true; do
-    show_menu
-    read -p "Select a scenario (0-9): " choice
-    
-    case $choice in
+# Function to execute scenario by number
+execute_scenario() {
+    case $1 in
         1) pod_failure_simulation ;;
         2) node_drain_simulation ;;
         3) resource_pressure_simulation ;;
@@ -267,12 +355,85 @@ while true; do
         6) rolling_update_failure ;;
         7) cascading_failure ;;
         8) recovery_demonstration ;;
-        9) show_status ;;
-        0) echo -e "${GREEN}👋 Goodbye!${NC}"; exit 0 ;;
-        *) echo -e "${RED}Invalid option. Please try again.${NC}" ;;
+        9|status) show_status ;;
+        cleanup) recovery_demonstration ;;
+        *) echo -e "${RED}Invalid scenario: $1${NC}"; show_usage; exit 1 ;;
     esac
-    
+}
+
+# Show usage information
+show_usage() {
+    echo -e "${BLUE}Kubernetes Chaos Engineering Scenarios${NC}"
     echo ""
-    read -p "Press Enter to continue..."
-    clear
-done
+    echo "Usage:"
+    echo "  $0                    # Interactive mode"
+    echo "  $0 [scenario]         # Direct execution"
+    echo "  $0 status             # Show current status"
+    echo "  $0 cleanup            # Clean up all chaos"
+    echo ""
+    echo "Available scenarios:"
+    echo "  1 - Pod Failure Simulation"
+    echo "  2 - Node Drain Simulation"
+    echo "  3 - Resource Pressure (CPU/Memory/IO)"
+    echo "  4 - Network Partition Simulation"
+    echo "  5 - Storage Failure Simulation"
+    echo "  6 - Rolling Update with Failures"
+    echo "  7 - Cascading Failure Scenario"
+    echo "  8 - Recovery Demonstration"
+    echo ""
+    echo "Examples:"
+    echo "  $0 3                  # Launch resource pressure scenario"
+    echo "  $0 status             # Check current cluster status"
+    echo "  $0 cleanup            # Clean up all chaos scenarios"
+    echo ""
+    echo -e "${YELLOW}💡 After launching a scenario, use these commands to observe:${NC}"
+    echo "  k9s                                    # Interactive cluster viewer"
+    echo "  kubectl get pods --all-namespaces     # List all pods"
+    echo "  kubectl top nodes                     # Node resource usage"
+    echo "  kubectl get events --sort-by='.lastTimestamp' | tail -10"
+    echo "  watch 'kubectl get pods --all-namespaces | grep -E \"(Evicted|Pending|Error)\"'"
+}
+
+# Handle command line arguments
+if [ $# -eq 0 ]; then
+    # Interactive mode
+    while true; do
+        show_menu
+        read -p "Select a scenario (0-9): " choice
+        
+        case $choice in
+            0) echo -e "${GREEN}👋 Goodbye!${NC}"; exit 0 ;;
+            *) execute_scenario $choice ;;
+        esac
+        
+        echo ""
+        echo -e "${YELLOW}💡 Scenario launched! You can now use k9s or kubectl to observe the effects.${NC}"
+        echo -e "${BLUE}Useful commands:${NC}"
+        echo "  k9s"
+        echo "  kubectl get pods --all-namespaces"
+        echo "  kubectl top nodes"
+        echo ""
+        read -p "Press Enter to return to menu or Ctrl+C to exit..."
+        clear
+    done
+else
+    # Direct execution mode
+    case $1 in
+        help|--help|-h)
+            show_usage
+            exit 0
+            ;;
+        *)
+            echo -e "${BLUE}🚀 Launching chaos scenario: $1${NC}"
+            execute_scenario $1
+            echo ""
+            echo -e "${GREEN}✅ Scenario '$1' has been launched!${NC}"
+            echo -e "${YELLOW}💡 You can now observe the effects with:${NC}"
+            echo "  k9s                                    # Interactive cluster viewer"
+            echo "  kubectl get pods --all-namespaces     # List all pods"
+            echo "  kubectl top nodes                     # Node resource usage"
+            echo "  $0 status                             # Check scenario status"
+            echo "  $0 cleanup                            # Clean up when done"
+            ;;
+    esac
+fi
