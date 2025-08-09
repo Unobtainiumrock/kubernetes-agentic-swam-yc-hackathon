@@ -4,13 +4,13 @@ This repository provides the complete environment to demonstrate an AI-based age
 
 ## 🏛️ System Architecture Overview
 
-The architecture is designed with clear separation of concerns: the **Frontend Dashboard** (our window into the system), the **Backend Orchestrator** (demo coordination and chaos injection), the **AI Agent Swarm** (autonomous healing system), and the **Kubernetes Cluster** (the environment being managed). 
+The architecture is designed with clear separation of concerns: the **Frontend Dashboard** (our window into the system), the **Backend Coordination Script** (non-agentic demo control and chaos injection), the **AI Agent Swarm** (autonomous healing system), and the **Kubernetes Cluster** (the environment being managed). 
 
-**Key Principle**: The orchestrator creates problems, the agents solve them - simulating real-world scenarios where external issues occur and AI systems respond autonomously.
+**Key Principle**: The coordination script creates problems through scripted chaos injection, the AI agents solve them autonomously - simulating real-world scenarios where external issues occur and intelligent systems respond without human intervention.
 
 ### Level 1: High-Level System Components
 
-This diagram shows the primary components and their basic relationships. The user interacts with the UI, which is powered by the Backend Orchestrator. The Orchestrator manages a swarm of AI agents, which monitor and heal the cluster, while the orchestrator can inject controlled failures for demonstration purposes.
+This diagram shows the primary components and their basic relationships. The user interacts with the UI, which is powered by a simple FastAPI server. The coordination script is non-agentic - it just executes predefined chaos scenarios and coordinates the demo flow, while the AI agents autonomously monitor and heal the cluster.
 
 ```mermaid
 graph TB
@@ -19,7 +19,7 @@ graph TB
     end
 
     subgraph "Backend Layer"
-        Orchestrator["🐍 FastAPI Orchestrator<br/>Demo Control & Chaos Injection"]
+        Orchestrator["🐍 FastAPI Server<br/>Non-Agentic Script<br/>Demo Control & Chaos Injection"]
     end
 
     subgraph "Agent Layer"
@@ -48,7 +48,7 @@ graph TB
 
 ### Level 2: Agent & Cluster Interaction Workflow
 
-This level details the workflow with **clear separation of concerns**. The **Backend Orchestrator** manages the demo and injects failures for testing, while the **AI Agents** act as the autonomous healing system. The orchestrator creates problems, and the agents solve them naturally - just like they would in a real production environment where they don't know about the source of failures.
+This level details the workflow with **clear separation of concerns**. The **Backend Coordination Script** is a simple, non-agentic script that manages the demo flow and injects predefined failures for testing, while the **AI Agents** act as the autonomous healing system. The script creates problems through basic automation, and the agents solve them intelligently - just like they would in a real production environment where they don't know about the source of failures.
 
 ```mermaid
 graph LR
@@ -56,9 +56,9 @@ graph LR
         UI["📈 React Dashboard"]
     end
 
-    subgraph "Backend Orchestrator"
-        Orchestrator["🐍 FastAPI Orchestrator"]
-        ChaosEngine["💥 Chaos Engine"]
+    subgraph "Backend Coordination Script"
+        Orchestrator["🐍 FastAPI Server<br/>(Non-Agentic)"]
+        ChaosEngine["💥 Chaos Engine<br/>(Scripted Failures)"]
     end
 
     subgraph "Agent Layer"
@@ -76,11 +76,11 @@ graph LR
 
     UI <-.->|WebSocket Stream| Orchestrator
     
-    %% Orchestrator manages demo and chaos
+    %% Non-agentic script manages demo and chaos
     Orchestrator --> ChaosEngine
-    ChaosEngine -- "1. Injects Failure<br/>(kubectl delete pod)" --> K8sAPI
+    ChaosEngine -- "1. Executes Scripted Failure<br/>(kubectl delete pod)" --> K8sAPI
     
-    %% Agent operates independently 
+    %% AI Agent operates independently 
     Agent -- "2. Detects Issues<br/>(kubectl get pods)" --> Tools
     Agent -- "3. Analyzes with AI<br/>(k8sgpt analyze)" --> Tools
     Tools -- "4. Queries cluster state" --> K8sAPI
