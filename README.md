@@ -1,4 +1,4 @@
-# Kubernetes Demo Environment with Kind.
+# Kubernetes Demo Environment with Kind
 
 This repository contains infrastructure as code to create a medium complex Kubernetes environment using Kind (Kubernetes in Docker) for demonstrating pod failures, node crashes, and various chaos engineering scenarios.
 
