@@ -59,3 +59,6 @@ investigation_reports/
 demo_*.json
 autonomous_report_*.txt
 *.investigation_report
+
+# Reports will be stored in root /reports directory
+../reports/

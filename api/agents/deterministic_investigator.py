@@ -35,6 +35,23 @@ class DeterministicInvestigator(BaseInvestigator):
         # Investigation step counter
         self.current_step = 0
         
+    async def _investigate(self) -> None:
+        """
+        Main investigation logic implementation.
+        Runs the full deterministic investigation process.
+        """
+        try:
+            self.logger.info("Starting deterministic investigation...")
+            result = await self.run_investigation()
+            
+            # Store report data for autonomous monitor
+            self.report_data = result
+            
+            self.logger.info("Deterministic investigation completed successfully")
+        except Exception as e:
+            self.logger.error(f"Investigation failed: {e}")
+            raise
+        
     async def run_investigation(self, 
                               namespace: Optional[str] = None,
                               include_k8sgpt: bool = True,

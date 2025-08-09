@@ -5,6 +5,9 @@
 # Claude AI conversation cache
 .claude/
 
+# Investigation reports directory
+reports/
+
 # Python cache and compiled files
 __pycache__/
 *.py[cod]
