@@ -1,0 +1,59 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: demo-cluster
+nodes:
+  # Control plane node
+  - role: control-plane
+    kubeadmConfigPatches:
+    - |
+      kind: InitConfiguration
+      nodeRegistration:
+        kubeletExtraArgs:
+          node-labels: "ingress-ready=true"
+    extraPortMappings:
+    - containerPort: 80
+      hostPort: 80
+      protocol: TCP
+    - containerPort: 443
+      hostPort: 443
+      protocol: TCP
+    - containerPort: 30000
+      hostPort: 30000
+      protocol: TCP
+    - containerPort: 30001
+      hostPort: 30001
+      protocol: TCP
+    - containerPort: 30002
+      hostPort: 30002
+      protocol: TCP
+  
+  # Worker nodes for demo scenarios
+  - role: worker
+    labels:
+      tier: frontend
+      zone: us-west-1a
+  
+  - role: worker
+    labels:
+      tier: backend
+      zone: us-west-1b
+  
+  - role: worker
+    labels:
+      tier: database
+      zone: us-west-1c
+  
+  # Additional worker for high availability scenarios
+  - role: worker
+    labels:
+      tier: cache
+      zone: us-west-1a
+
+# Networking configuration for realistic scenarios
+networking:
+  # Disable default CNI to install our own
+  disableDefaultCNI: false
+  # Use a custom pod subnet
+  podSubnet: "10.244.0.0/16"
+  # Use a custom service subnet  
+  serviceSubnet: "10.96.0.0/16"
