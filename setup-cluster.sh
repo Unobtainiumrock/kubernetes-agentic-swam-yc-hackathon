@@ -49,15 +49,15 @@ fi
 
 echo -e "${YELLOW}📋 Pre-flight checks passed!${NC}"
 
-# Delete existing cluster if it exists
+# Check if cluster already exists
 if kind get clusters | grep -q "^${CLUSTER_NAME}$"; then
-    echo -e "${YELLOW}🗑️  Deleting existing cluster: ${CLUSTER_NAME}${NC}"
-    kind delete cluster --name="${CLUSTER_NAME}"
+    echo -e "${GREEN}✅ Cluster '${CLUSTER_NAME}' already exists, skipping creation${NC}"
+    echo -e "${YELLOW}⏳ Verifying cluster is ready...${NC}"
+else
+    # Create the cluster
+    echo -e "${BLUE}🏗️  Creating Kind cluster with config: ${CONFIG_FILE}${NC}"
+    kind create cluster --config="${CONFIG_FILE}" --wait=300s
 fi
-
-# Create the cluster
-echo -e "${BLUE}🏗️  Creating Kind cluster with config: ${CONFIG_FILE}${NC}"
-kind create cluster --config="${CONFIG_FILE}" --wait=300s
 
 # Wait for cluster to be ready
 echo -e "${YELLOW}⏳ Waiting for cluster to be fully ready...${NC}"
@@ -84,16 +84,22 @@ kubectl patch deployment metrics-server -n kube-system --type='json' \
 
 # Install k8sgpt-operator via Helm
 echo -e "${BLUE}🤖 Installing k8sgpt-operator...${NC}"
-helm repo add k8sgpt https://charts.k8sgpt.ai/ || true
-helm repo update
 
-# Install k8sgpt-operator using local chart if available, otherwise from repo
-if [[ -d "k8sgpt-operator" ]]; then
-    echo -e "${YELLOW}📁 Using local k8sgpt-operator chart...${NC}"
-    helm install k8sgpt-operator ./k8sgpt-operator -n k8sgpt-operator-system --create-namespace
+# Check if k8sgpt-operator is already installed
+if helm list -n k8sgpt-operator-system | grep -q "k8sgpt-operator"; then
+    echo -e "${GREEN}✅ k8sgpt-operator already installed, skipping installation${NC}"
 else
-    echo -e "${YELLOW}📦 Using k8sgpt-operator from Helm repository...${NC}"
-    helm install k8sgpt-operator k8sgpt/k8sgpt-operator -n k8sgpt-operator-system --create-namespace
+    helm repo add k8sgpt https://charts.k8sgpt.ai/ || true
+    helm repo update
+    
+    # Install k8sgpt-operator using local chart if available, otherwise from repo
+    if [[ -d "k8sgpt-operator" ]]; then
+        echo -e "${YELLOW}📁 Using local k8sgpt-operator chart...${NC}"
+        helm install k8sgpt-operator ./k8sgpt-operator -n k8sgpt-operator-system --create-namespace
+    else
+        echo -e "${YELLOW}📦 Using k8sgpt-operator from Helm repository...${NC}"
+        helm install k8sgpt-operator k8sgpt/k8sgpt-operator -n k8sgpt-operator-system --create-namespace
+    fi
 fi
 
 # Wait for k8sgpt-operator to be ready
@@ -119,3 +125,44 @@ echo ""
 echo -e "${GREEN}🎉 Your demo environment is ready!${NC}"
 echo "   Run './deploy-demo-apps.sh' to deploy sample applications"
 echo "   Run './chaos-scenarios.sh' to simulate failures"
+echo ""
+
+# k8sgpt Authentication Setup
+echo -e "${BLUE}🤖 k8sgpt Authentication Setup${NC}"
+echo "========================================"
+echo -e "${YELLOW}To enable AI-powered diagnostics, k8sgpt needs API credentials.${NC}"
+echo ""
+
+read -p "Would you like to configure k8sgpt authentication now? (y/N): " -r
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo ""
+    echo -e "${BLUE}🔧 Running k8sgpt authentication setup...${NC}"
+    echo "k8sgpt will guide you through the authentication process."
+    echo ""
+    
+    # Check if k8sgpt CLI is installed
+    if ! command -v k8sgpt &> /dev/null; then
+        echo -e "${YELLOW}⚠️  k8sgpt CLI not found. Installing via brew...${NC}"
+        brew install k8sgpt-ai/k8sgpt/k8sgpt || {
+            echo -e "${RED}❌ Failed to install k8sgpt CLI${NC}"
+            echo "Please install manually: https://docs.k8sgpt.ai/getting-started/installation/"
+            echo "Then run: k8sgpt auth"
+            exit 1
+        }
+    fi
+    
+    # Run k8sgpt auth
+    k8sgpt auth
+    
+    echo ""
+    echo -e "${GREEN}✅ k8sgpt authentication completed!${NC}"
+    echo ""
+    echo -e "${BLUE}🔧 Useful k8sgpt Commands:${NC}"
+    echo "   k8sgpt analyze"
+    echo "   k8sgpt analyze --explain"
+    echo "   k8sgpt analyze --filter=Pod"
+    echo "   k8sgpt filters list"
+else
+    echo -e "${YELLOW}⚠️ Skipping k8sgpt authentication setup.${NC}"
+    echo "You can configure it by running: k8sgpt auth"
+fi
