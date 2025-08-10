@@ -22,16 +22,31 @@ from agents.tools.kubectl_wrapper import KubectlWrapper
 from agents.deterministic_investigator import DeterministicInvestigator
 from agents.agentic_investigator import AgenticInvestigator
 
+# Import enhanced agentic investigator V2 with knowledge base
+try:
+    from agents.agentic_investigator_v2 import AgenticInvestigatorV2
+    AGENTIC_V2_AVAILABLE = True
+except ImportError:
+    AgenticInvestigatorV2 = None
+    AGENTIC_V2_AVAILABLE = False
+
 
 class AutonomousMonitor:
     """Autonomous monitor with intelligent issue detection - Chunk 2 implementation."""
     
-    def __init__(self):
+    def __init__(self, investigation_mode="deterministic"):
         self.running = False
         self.kubectl = KubectlWrapper()
         self.check_interval = 1  # 1 second for live demo
         self.investigation_in_progress = False
         self.last_investigation_time = None
+        self.investigation_count = 0  # For alternating mode
+        
+        # Investigation mode configuration
+        self.investigation_mode = investigation_mode
+        if investigation_mode == "agentic_v2" and not AGENTIC_V2_AVAILABLE:
+            print("⚠️  Agentic V2 not available, falling back to deterministic mode")
+            self.investigation_mode = "deterministic"
         
         # Setup logging
         logging.basicConfig(
@@ -345,15 +360,33 @@ class AutonomousMonitor:
         if len(issues) > 3:
             print(f"   ... and {len(issues) - 3} more issues")
         
-        print(f"\n🤖 Starting deterministic investigation...")
+        # Choose investigation type based on mode
+        if self.investigation_mode == "agentic_v2":
+            print(f"\n🧠 Starting Enhanced AI Investigation with AcmeCorp Knowledge...")
+            investigator_type = "AI-Agentic V2"
+            investigator = AgenticInvestigatorV2()
+        elif self.investigation_mode == "alternating":
+            # Alternate between deterministic and agentic for demo variety
+            if self.investigation_count % 2 == 0:
+                print(f"\n🤖 Starting Deterministic Investigation...")
+                investigator_type = "Deterministic"
+                investigator = DeterministicInvestigator()
+            else:
+                print(f"\n🧠 Starting Enhanced AI Investigation...")
+                investigator_type = "AI-Agentic V2"
+                investigator = AgenticInvestigatorV2() if AGENTIC_V2_AVAILABLE else DeterministicInvestigator()
+        else:
+            # Default: deterministic (preserves existing behavior)
+            print(f"\n🤖 Starting deterministic investigation...")
+            investigator_type = "Deterministic"
+            investigator = DeterministicInvestigator()
         
         # Mark investigation as in progress
         self.investigation_in_progress = True
         self.last_investigation_time = datetime.now()
+        self.investigation_count += 1
         
         try:
-            # Run deterministic investigation in background
-            investigator = DeterministicInvestigator()
             
             # Create timestamp for report filename
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -371,8 +404,16 @@ class AutonomousMonitor:
                 with open(report_filename, 'w') as f:
                     f.write(report_content)
                 
-                print(f"✅ Investigation complete! Report saved to {report_filename}")
+                print(f"✅ {investigator_type} Investigation complete! Report saved to {report_filename}")
                 print(f"📋 Summary: {len(investigator.report_data.get('findings', []))} findings identified")
+                
+                # Show AI-specific insights if available
+                if 'ai_investigation' in investigator.report_data:
+                    ai_info = investigator.report_data['ai_investigation']
+                    if 'total_solutions_generated' in ai_info:
+                        print(f"💡 AI Solutions Generated: {ai_info['total_solutions_generated']}")
+                    if 'knowledge_base_used' in ai_info:
+                        print(f"📚 Knowledge Base: {ai_info['knowledge_base_used']}")
             else:
                 print(f"❌ Investigation failed or incomplete")
                 
@@ -537,8 +578,32 @@ End of Report
 
 
 async def main():
-    """Main function."""
-    monitor = AutonomousMonitor()
+    """Main function with command line argument support."""
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Autonomous Kubernetes Monitor")
+    parser.add_argument(
+        "--mode", 
+        choices=["deterministic", "agentic_v2", "alternating"],
+        default="deterministic",
+        help="Investigation mode: deterministic (default), agentic_v2 (AI with knowledge base), alternating (alternate between both)"
+    )
+    
+    args = parser.parse_args()
+    
+    # Show mode information
+    mode_descriptions = {
+        "deterministic": "🤖 Systematic rule-based investigation",
+        "agentic_v2": "🧠 AI-powered investigation with AcmeCorp knowledge base",
+        "alternating": "🔄 Alternating between deterministic and AI investigation"
+    }
+    
+    print(f"🎯 Investigation Mode: {mode_descriptions.get(args.mode, args.mode)}")
+    if args.mode == "agentic_v2" and not AGENTIC_V2_AVAILABLE:
+        print("⚠️  Note: Agentic V2 will fall back to deterministic if AI unavailable")
+    print()
+    
+    monitor = AutonomousMonitor(investigation_mode=args.mode)
     await monitor.start_monitoring()
 
 
