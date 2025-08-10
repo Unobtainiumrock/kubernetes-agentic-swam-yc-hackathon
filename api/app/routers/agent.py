@@ -1,16 +1,23 @@
 import uuid
 from fastapi import APIRouter, Depends, HTTPException
 import os
-
-from app.schemas import RunRequest, RunResponse
-
-# Add /deps to sys.path so API can import agent code when mounted
 import sys
-if "/deps" not in sys.path:
-    sys.path.append("/deps")
 
-from adk_agent.config.loader import load_runtime_config
-from adk_agent.agents.core_agent import create_core_agent
+from ..schemas import RunRequest, RunResponse
+
+# Add paths for agent imports
+if "/root" not in sys.path:
+    sys.path.append("/root")
+if "/root/google-adk/src" not in sys.path:
+    sys.path.append("/root/google-adk/src")
+
+try:
+    from adk_agent.config.loader import load_runtime_config
+    from adk_agent.agents.core_agent import create_core_agent
+except ImportError:
+    # Fallback for development
+    load_runtime_config = None
+    create_core_agent = None
 
 router = APIRouter()
 
@@ -21,7 +28,10 @@ async def health() -> dict:
 
 def get_agent():
     try:
-        config_path = os.getenv("ADK_CONFIG_PATH")
+        if load_runtime_config is None or create_core_agent is None:
+            raise HTTPException(status_code=500, detail="ADK agent modules not available")
+        
+        config_path = os.getenv("ADK_CONFIG_PATH", "/root/google-adk/src/adk_agent/config/runtime.yaml")
         config = load_runtime_config(config_path)
         agent = create_core_agent(config)
         return agent

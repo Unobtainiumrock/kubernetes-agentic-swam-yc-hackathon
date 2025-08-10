@@ -9,7 +9,7 @@ api-build:
 
 api-run:
 	docker rm -f adk-api >/dev/null 2>&1 || true
-	docker run -d --name adk-api -p 8080:8000 $(ENV_OPT) $(IMAGE_NAME)
+	docker run -d --name adk-api -p 8889:8888 $(ENV_OPT) $(IMAGE_NAME)
 
 api-logs:
 	docker logs -f adk-api

@@ -10,8 +10,17 @@ import uuid
 from datetime import datetime
 
 # Import our investigation agents
-from api.agents.deterministic_investigator import DeterministicInvestigator
-from api.agents.agentic_investigator import AgenticInvestigator
+import sys
+import os
+
+# Add current directory to path for imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+api_dir = os.path.join(current_dir, '..', '..')
+if api_dir not in sys.path:
+    sys.path.append(api_dir)
+
+from agents.deterministic_investigator import DeterministicInvestigator
+from agents.agentic_investigator import AgenticInvestigator
 
 logger = logging.getLogger(__name__)
 
