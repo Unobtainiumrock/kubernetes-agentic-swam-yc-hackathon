@@ -151,7 +151,7 @@ class DeterministicInvestigator(BaseInvestigator):
                 print(f"   ❌ Failed to get version info: {version_info.get('error', 'Unknown error')}")
                 
             if namespaces["success"]:
-                ns_count = len(namespaces.get("parsed_output", {}).get("items", []))
+                ns_count = len(namespaces.get("namespaces", {}).get("items", []))
                 print(f"   ✅ Found {ns_count} namespaces")
             else:
                 print(f"   ❌ Failed to get namespaces: {namespaces.get('error', 'Unknown error')}")
