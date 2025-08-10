@@ -311,48 +311,50 @@ curl.exe -LO "https://dl.k8s.io/release/v1.28.0/bin/windows/amd64/kubectl.exe"
 
 ## 🚀 Quick Start
 
-### 1. Create the Cluster
+### Single Command Setup
 ```bash
-chmod +x setup-cluster.sh
-./setup-cluster.sh
+./start-fullstack.sh
 ```
 
-This will:
-- Create a 5-node Kind cluster with the specified configuration
-- Install NGINX Ingress Controller
-- Install Metrics Server for monitoring
-- Set up the cluster context
+This **one command** handles everything:
+- ✅ **Builds development container** with all tools (kubectl, k8sgpt, Python, etc.)
+- ✅ **Starts backend services** (FastAPI + Autonomous Monitor) in container
+- ✅ **Installs frontend dependencies** (if needed)
+- ✅ **Starts React frontend** with hot reload
+- ✅ **Sets up networking** with automatic proxying
 
-### 2. Deploy Demo Applications
+### What You Get
+
+**🌐 Frontend Dashboard**: http://localhost:3000
+- Live log streaming from autonomous agents
+- Real-time cluster health monitoring
+- Investigation reports with clickable links
+
+**🔧 Backend API**: http://localhost:8000
+- Autonomous Kubernetes monitoring (every 1 second)
+- AI-powered investigation agents
+- Google ADK integration for intelligent analysis
+
+**📚 API Documentation**: http://localhost:8000/docs
+- Interactive Swagger UI
+- Test all endpoints directly
+
+### Prerequisites Setup (Optional)
+
+If you want to set up your own Kubernetes cluster for testing:
+
 ```bash
-chmod +x deploy-demo-apps.sh
-./deploy-demo-apps.sh
+# 1. Create demo cluster with chaos apps
+chmod +x setup-cluster.sh && ./setup-cluster.sh
+
+# 2. Deploy applications with intentional failures
+chmod +x deploy-demo-apps.sh && ./deploy-demo-apps.sh
+
+# 3. Run chaos scenarios (optional)
+chmod +x chaos-scenarios.sh && ./chaos-scenarios.sh
 ```
 
-This deploys:
-- **Frontend**: 3 NGINX replicas in `frontend` namespace
-- **Backend**: 4 Apache replicas in `backend` namespace  
-- **Database**: 2 Redis StatefulSet replicas in `database` namespace
-- **Cache**: 2 Memcached replicas in `backend` namespace
-- **CPU Stress**: Load testing application
-- **HPA**: Horizontal Pod Autoscaler for backend (2-8 replicas)
-
-### 3. Run Chaos Scenarios
-```bash
-chmod +x chaos-scenarios.sh
-./chaos-scenarios.sh
-```
-
-Interactive menu with scenarios:
-1. **Pod Failure Simulation** - Randomly kill pods
-2. **Node Drain Simulation** - Drain worker nodes
-3. **Resource Pressure** - Create CPU/Memory stress
-4. **Network Partition** - Block cross-namespace communication
-5. **Storage Failure** - Simulate database outages
-6. **Rolling Update Failure** - Deploy bad container images
-7. **Cascading Failure** - Multi-system failure simulation
-8. **Recovery Demonstration** - Restore all services
-9. **Show Current Status** - Display cluster health
+**Note**: The full stack application will work with any accessible Kubernetes cluster - it doesn't require the demo cluster setup.
 
 ## 🧹 Cleanup
 
@@ -433,15 +435,20 @@ Modify `chaos-scenarios.sh` to add:
 - Time-based scenarios
 - Automated recovery procedures
 
-## 📁 File Structure
+## 📁 Key Components
 
 ```
-├── kind-cluster-config.yaml    # Kind cluster configuration
-├── setup-cluster.sh           # Cluster creation script
-├── deploy-demo-apps.sh        # Application deployment script
-├── chaos-scenarios.sh         # Chaos engineering scenarios
-├── cleanup.sh                 # Cleanup script
-└── README.md                  # This file
+├── start-fullstack.sh         # 🚀 Single command to start everything
+├── run-streaming-stack.sh     # Backend services orchestration
+├── Dockerfile                 # Development container definition
+├── Makefile                   # Build and container management
+├── frontend/                  # React dashboard with live monitoring
+├── backend/                   # FastAPI server with Google ADK integration
+├── api/                       # Autonomous monitoring and investigation agents
+├── reports/                   # Generated investigation reports
+├── setup-cluster.sh           # Optional: Create demo Kubernetes cluster
+├── deploy-demo-apps.sh        # Optional: Deploy test applications
+└── chaos-scenarios.sh         # Optional: Chaos engineering scenarios
 ```
 
 ## 🤝 Sharing and Replication
@@ -449,11 +456,10 @@ Modify `chaos-scenarios.sh` to add:
 This entire setup is designed to be easily shared and replicated:
 
 1. **Clone this repository**
-2. **Run the setup script** - `./setup-cluster.sh`
-3. **Deploy applications** - `./deploy-demo-apps.sh`
-4. **Start demonstrating** - `./chaos-scenarios.sh`
+2. **Ensure Docker is running**
+3. **Run the full stack** - `./start-fullstack.sh`
 
-The infrastructure as code approach ensures consistent environments across different machines and users.
+The containerized approach ensures consistent environments across different machines and users. No complex setup required!
 
 ## 🐛 Troubleshooting
 
