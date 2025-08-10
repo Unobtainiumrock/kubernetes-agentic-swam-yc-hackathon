@@ -34,6 +34,16 @@ exec:
 exec-user:
 	${DOCKER_CMD} exec -it -u $$(id -u):$$(id -g) ${CONTAINER_NAME} bash
 
+# Run container and automatically start streaming stack
+run-local-with-stack:
+	${DOCKER_CMD} run -it --rm --name ${CONTAINER_NAME} \
+		-v ${PWD}:/root \
+		-v ${HOME}/.kube:/root/.kube:ro \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-p 8000:8000 \
+		--network host \
+		${IMAGE_NAME} bash -c "cd /root && ./run-streaming-stack.sh"
+
 # Streaming stack targets
 stack-build:
 	docker-compose build

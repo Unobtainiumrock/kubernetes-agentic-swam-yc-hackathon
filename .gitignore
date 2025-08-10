@@ -4,6 +4,9 @@
 .kube
 .cache
 
+# Pip install logs and similar accidents
+=*
+
 # Claude AI conversation cache
 .claude/
 
