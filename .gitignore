@@ -1,6 +1,8 @@
 # Kubernetes configuration and cache files
 .kube/cache/
 .bash_history
+.kube
+.cache
 
 # Claude AI conversation cache
 .claude/
