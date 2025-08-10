@@ -57,12 +57,12 @@ graph LR
     end
 
     subgraph "Backend Coordination Script"
-        Orchestrator["🐍 FastAPI Server &#40;Non-Agentic&#41;"]
-        ChaosEngine["💥 Chaos Engine &#40;Scripted Failures&#41;"]
+        Orchestrator["🐍 FastAPI Server"]
+        ChaosEngine["💥 Chaos Engine"]
     end
 
     subgraph "Agent Layer"
-        Agent["🤖 AI Agent &#40;Autonomous Healer&#41;"]
+        Agent["🤖 AI Agent"]
     end
 
     subgraph "Kubernetes Environment"
@@ -78,19 +78,18 @@ graph LR
     
     %% Non-agentic script manages demo and chaos
     Orchestrator --> ChaosEngine
-    ChaosEngine -- "Executes Scripted Failure" --> K8sAPI
+    ChaosEngine -->|Executes Scripted Failure| K8sAPI
     
     %% AI Agent operates independently 
-    Agent -- "Detects Issues" --> Tools
-    Agent -- "Analyzes with AI" --> Tools
-    Tools -- "Queries cluster state" --> K8sAPI
-    K8sAPI -- "Returns cluster state" --> Tools
-    Tools -- "Returns diagnosis" --> Agent
-    
-    Agent -- "Executes Healing" --> Tools
-    Agent -- "Streams Status/Actions" --> Orchestrator
+    Agent -->|Detects Issues| Tools
+    Agent -->|Analyzes with AI| Tools
+    Tools -->|Queries cluster state| K8sAPI
+    K8sAPI -->|Returns cluster state| Tools
+    Tools -->|Returns diagnosis| Agent
+    Agent -->|Executes Healing| Tools
+    Agent -->|Streams Status/Actions| Orchestrator
 
-    K8sAPI -- "State Changes" --> ClusterNodes
+    K8sAPI -->|State Changes| ClusterNodes
 
     classDef ui fill:#d3e5ef,stroke:#333,stroke-width:1px
     classDef backend fill:#e5f5e0,stroke:#333,stroke-width:1px
