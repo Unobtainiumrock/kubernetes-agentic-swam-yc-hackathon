@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # FastAPI Backend
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./reports:/root/reports
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - PYTHONPATH=/app:/deps
+      - DEBUG=true
+    networks:
+      - agent-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Autonomous Monitor (Agent)
+  autonomous-monitor:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    volumes:
+      - ./reports:/root/reports
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ~/.kube:/root/.kube:ro
+    environment:
+      - BACKEND_URL=http://backend:8000
+      - PYTHONPATH=/app:/deps
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - agent-network
+    command: ["python", "autonomous_monitor.py"]
+
+  # React Frontend (Development)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+    environment:
+      - REACT_APP_BACKEND_URL=http://localhost:8001
+      - CHOKIDAR_USEPOLLING=true
+    networks:
+      - agent-network
+    depends_on:
+      - backend
+
+networks:
+  agent-network:
+    driver: bridge
+
+volumes:
+  reports:
+    driver: local 

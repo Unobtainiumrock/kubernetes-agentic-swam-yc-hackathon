@@ -9,8 +9,16 @@ from fastapi import WebSocket
 from typing import Dict, List, Set
 import json
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
+
+# Custom JSON encoder for datetime objects
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super(DateTimeEncoder, self).default(obj)
 
 class ConnectionManager:
     """Manages WebSocket connections for different channels"""
@@ -63,7 +71,7 @@ class ConnectionManager:
     
     async def broadcast_json_to_channel(self, data: dict, channel: str):
         """Broadcast JSON data to all connections in a channel"""
-        message = json.dumps(data)
+        message = json.dumps(data, cls=DateTimeEncoder)
         await self.broadcast_to_channel(message, channel)
     
     def get_channel_count(self, channel: str) -> int:

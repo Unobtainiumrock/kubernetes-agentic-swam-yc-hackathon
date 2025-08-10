@@ -13,6 +13,7 @@ import AgentStatusGrid from './AgentStatusGrid'
 import ClusterView from './ClusterView'
 import MetricsPanel from './MetricsPanel'
 import LiveLogStream from './LiveLogStream'
+import AgentStatusPanel from './AgentStatusPanel'
 
 const Dashboard = () => {
   const [clusterMetrics, setClusterMetrics] = useState({
@@ -146,6 +147,16 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Real-time Agent Status */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div className="lg:col-span-1">
+          <AgentStatusPanel />
+        </div>
+        <div className="lg:col-span-2">
+          <LiveLogStream />
+        </div>
+      </div>
+
       {/* Bottom Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Cluster View */}
@@ -153,9 +164,9 @@ const Dashboard = () => {
           <ClusterView />
         </div>
         
-        {/* Live Logs */}
+        {/* Metrics Panel Extended */}
         <div>
-          <LiveLogStream />
+          <MetricsPanel metrics={clusterMetrics} />
         </div>
       </div>
     </div>

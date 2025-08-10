@@ -21,6 +21,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from agents.tools.kubectl_wrapper import KubectlWrapper
 from agents.deterministic_investigator import DeterministicInvestigator
 from agents.agentic_investigator import AgenticInvestigator
+from log_streamer import AutonomousMonitorStreamer
 
 
 class AutonomousMonitor:
@@ -32,6 +33,7 @@ class AutonomousMonitor:
         self.check_interval = 1  # 1 second for live demo
         self.investigation_in_progress = False
         self.last_investigation_time = None
+        self.streamer = None
         
         # Setup logging
         logging.basicConfig(
@@ -338,14 +340,21 @@ class AutonomousMonitor:
         severity_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
         sorted_issues = sorted(issues, key=lambda x: severity_order.get(x.get("severity", "low"), 3))
         
+        issues_summary = []
         for i, issue in enumerate(sorted_issues[:3]):
             severity_icon = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🔵"}.get(issue.get("severity", "low"), "⚪")
-            print(f"   {severity_icon} {issue.get('reason', 'Unknown')}: {issue.get('resource', 'Unknown resource')}")
+            issue_text = f"{issue.get('reason', 'Unknown')}: {issue.get('resource', 'Unknown resource')}"
+            print(f"   {severity_icon} {issue_text}")
+            issues_summary.append(issue_text)
         
         if len(issues) > 3:
             print(f"   ... and {len(issues) - 3} more issues")
         
         print(f"\n🤖 Starting deterministic investigation...")
+        
+        # Stream to backend
+        if self.streamer:
+            await self.streamer.log_issues_detected(len(issues), issues_summary)
         
         # Mark investigation as in progress
         self.investigation_in_progress = True
@@ -361,6 +370,10 @@ class AutonomousMonitor:
             
             print(f"📝 Investigation results will be saved to: {report_filename}")
             
+            # Stream investigation start
+            if self.streamer:
+                await self.streamer.log_investigation_start(report_filename)
+            
             # Run investigation
             await investigator._investigate()
             
@@ -372,9 +385,18 @@ class AutonomousMonitor:
                     f.write(report_content)
                 
                 print(f"✅ Investigation complete! Report saved to {report_filename}")
-                print(f"📋 Summary: {len(investigator.report_data.get('findings', []))} findings identified")
+                findings_count = len(investigator.report_data.get('findings', []))
+                print(f"📋 Summary: {findings_count} findings identified")
+                
+                # Stream investigation completion
+                if self.streamer:
+                    await self.streamer.log_investigation_complete(True, findings_count)
             else:
                 print(f"❌ Investigation failed or incomplete")
+                
+                # Stream investigation failure
+                if self.streamer:
+                    await self.streamer.log_investigation_complete(False)
                 
         except Exception as e:
             print(f"❌ Investigation error: {e}")
@@ -491,6 +513,10 @@ End of Report
                 status_message = self.format_health_status(health_data)
                 print(status_message)
                 
+                # Stream status to backend
+                if self.streamer:
+                    await self.streamer.log_health_status(health_data, status_message)
+                
                 # Check if investigation should be triggered
                 if not health_data.get("healthy", False) and health_data.get("issues"):
                     await self.trigger_investigation(health_data)
@@ -528,9 +554,22 @@ End of Report
             print(f"❌ Environment validation failed: {e}")
             return False
         
+        # Initialize streamer
+        try:
+            self.streamer = AutonomousMonitorStreamer()
+            await self.streamer.__aenter__()
+            print("✅ Log streaming initialized")
+        except Exception as e:
+            print(f"⚠️  Log streaming not available: {e}")
+            self.streamer = None
+        
         # Start monitoring
         self.running = True
         await self.health_check_loop()
+        
+        # Cleanup streamer
+        if self.streamer:
+            await self.streamer.__aexit__(None, None, None)
         
         print("\n🛑 Monitoring stopped")
         return True

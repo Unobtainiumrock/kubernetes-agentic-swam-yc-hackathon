@@ -34,6 +34,88 @@ exec:
 exec-user:
 	${DOCKER_CMD} exec -it -u $$(id -u):$$(id -g) ${CONTAINER_NAME} bash
 
+# Streaming stack targets
+stack-build:
+	docker-compose build
+
+stack-up:
+	docker-compose up -d
+
+stack-up-logs:
+	docker-compose up
+
+stack-down:
+	docker-compose down
+
+stack-logs:
+	docker-compose logs -f
+
+stack-restart:
+	docker-compose restart
+
+# Backend only
+backend-build:
+	docker-compose build backend
+
+backend-up:
+	docker-compose up -d backend
+
+backend-logs:
+	docker-compose logs -f backend
+
+# Agent only
+agent-build:
+	docker-compose build autonomous-monitor
+
+agent-up:
+	docker-compose up -d autonomous-monitor
+
+agent-logs:
+	docker-compose logs -f autonomous-monitor
+
+# Frontend only
+frontend-build:
+	docker-compose build frontend
+
+frontend-up:
+	docker-compose up -d frontend
+
+frontend-logs:
+	docker-compose logs -f frontend
+
+# Full development stack
+dev-up: stack-build
+	@echo "🚀 Starting full development stack..."
+	docker-compose up -d backend
+	@echo "⏳ Waiting for backend to be healthy..."
+	@until docker-compose exec backend curl -f http://localhost:8000/ > /dev/null 2>&1; do \
+		echo "Waiting for backend..."; \
+		sleep 2; \
+	done
+	@echo "✅ Backend is ready!"
+	docker-compose up -d autonomous-monitor frontend
+	@echo "🎉 Full stack is running!"
+	@echo "📊 Frontend: http://localhost:3000"
+	@echo "🔗 Backend: http://localhost:8000"
+	@echo "📝 API Docs: http://localhost:8000/docs"
+
+dev-logs:
+	docker-compose logs -f
+
+dev-down:
+	docker-compose down
+
+# Quick restart for development
+dev-restart-agent:
+	docker-compose restart autonomous-monitor
+
+dev-restart-backend:
+	docker-compose restart backend
+
+# Clean up everything
+clean:
+	docker-compose down -v --remove-orphans
+	docker system prune -f
 
 push:
 	${DOCKER_CMD} push ${TAG_LATEST}

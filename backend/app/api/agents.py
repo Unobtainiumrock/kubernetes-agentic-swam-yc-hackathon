@@ -11,8 +11,16 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Dict, Optional
 from datetime import datetime
 from pydantic import BaseModel
+import json
 
 router = APIRouter()
+
+# Custom JSON encoder for datetime objects
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super(DateTimeEncoder, self).default(obj)
 
 # Pydantic models
 class AgentStatus(BaseModel):
@@ -36,6 +44,25 @@ class AgentHistoryResponse(BaseModel):
     agent_id: str
     actions: List[AgentAction]
     total_count: int
+
+# Add new models for streaming logs
+class AgentLogEntry(BaseModel):
+    timestamp: datetime
+    agent_id: str
+    log_level: str  # "info", "warn", "error", "debug"
+    message: str
+    source: str  # "autonomous_monitor", "deterministic_investigator", etc.
+    details: Optional[Dict] = None
+
+class AgentStreamStatus(BaseModel):
+    agent_id: str
+    status: str  # "healthy", "issues_detected", "investigating", "error"
+    issues_count: int
+    nodes_ready: int
+    nodes_total: int
+    pods_running: int
+    pods_total: int
+    last_update: datetime
 
 # Mock data for development
 MOCK_AGENTS = [
@@ -77,6 +104,10 @@ MOCK_ACTIONS = [
         details={"pod_name": "frontend-app-abc", "action": "kubectl delete pod"}
     )
 ]
+
+# Global storage for recent logs (in production, use Redis or similar)
+RECENT_LOGS: List[AgentLogEntry] = []
+AGENT_STATUS: Dict[str, AgentStreamStatus] = {}
 
 @router.get("/", response_model=List[AgentStatus])
 async def get_all_agents():
@@ -151,3 +182,83 @@ async def stop_agent(agent_id: str):
     agent.last_seen = datetime.utcnow()
     
     return {"message": f"Agent {agent_id} stopped", "status": "stopped"} 
+
+@router.get("/logs/stream", response_model=List[AgentLogEntry])
+async def get_recent_logs(
+    limit: int = 50,
+    log_level: Optional[str] = None,
+    agent_id: Optional[str] = None
+):
+    """Get recent agent logs for streaming"""
+    logs = RECENT_LOGS
+    
+    # Filter by log level
+    if log_level:
+        logs = [log for log in logs if log.log_level == log_level]
+    
+    # Filter by agent ID
+    if agent_id:
+        logs = [log for log in logs if log.agent_id == agent_id]
+    
+    # Return most recent logs first
+    return sorted(logs, key=lambda x: x.timestamp, reverse=True)[:limit]
+
+@router.post("/logs/add")
+async def add_agent_log(log_entry: AgentLogEntry):
+    """Add a new log entry (used by autonomous monitor)"""
+    RECENT_LOGS.append(log_entry)
+    
+    # Keep only last 1000 logs in memory
+    if len(RECENT_LOGS) > 1000:
+        RECENT_LOGS.pop(0)
+    
+    # Broadcast to WebSocket clients
+    from ..websockets import connection_manager
+    log_data = {
+        "type": "agent_log",
+        "data": log_entry.dict()
+    }
+    await connection_manager.broadcast_json_to_channel(log_data, "agent-status")
+    
+    return {"status": "success", "message": "Log entry added"}
+
+@router.post("/status/update")
+async def update_agent_status(status: AgentStreamStatus):
+    """Update agent streaming status (used by autonomous monitor)"""
+    AGENT_STATUS[status.agent_id] = status
+    
+    # Broadcast to WebSocket clients
+    from ..websockets import connection_manager
+    status_data = {
+        "type": "agent_status_update",
+        "data": status.dict()
+    }
+    await connection_manager.broadcast_json_to_channel(status_data, "agent-status")
+    
+    return {"status": "success", "message": "Agent status updated"}
+
+@router.get("/status/current")
+async def get_current_agent_status():
+    """Get current status of all agents"""
+    return list(AGENT_STATUS.values())
+
+@router.get("/reports/{filename}")
+async def get_investigation_report(filename: str):
+    """Get investigation report file"""
+    import os
+    from fastapi.responses import FileResponse
+    
+    # Security check - only allow specific file patterns
+    if not filename.startswith("autonomous_report_") or not filename.endswith(".txt"):
+        raise HTTPException(status_code=404, detail="Report not found")
+    
+    report_path = f"/root/reports/{filename}"
+    
+    if not os.path.exists(report_path):
+        raise HTTPException(status_code=404, detail="Report file not found")
+    
+    return FileResponse(
+        path=report_path,
+        media_type="text/plain",
+        filename=filename
+    ) 
