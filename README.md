@@ -159,6 +159,79 @@ graph TD
     class R1,R2,R3 rest
 ```
 
+## 🔄 Autonomous Investigation & Report Flow
+
+The system includes an autonomous monitoring and investigation pipeline that detects issues and generates detailed reports:
+
+### Investigation Trigger Flow
+
+```mermaid
+graph TD
+    A[🔍 Autonomous Monitor] -->|Detects Issues| B[🚨 Issue Detection]
+    B -->|Triggers Investigation| C[🤖 DeterministicInvestigator]
+    C -->|Collects Data| D[📊 Cluster Analysis]
+    D -->|Formats Findings| E[📝 Report Generator]
+    E -->|Writes File| F[💾 /root/reports/autonomous_report_TIMESTAMP.txt]
+    F -->|Accessible via| G[🌐 Frontend /api/agents/reports/{filename}]
+    
+    style A fill:#f9d5e5,stroke:#333,stroke-width:2px
+    style C fill:#e5f5e0,stroke:#333,stroke-width:2px
+    style F fill:#fcf3cf,stroke:#333,stroke-width:2px
+    style G fill:#d3e5ef,stroke:#333,stroke-width:2px
+```
+
+### Report Generation Process
+
+1. **🔍 Autonomous Monitor** continuously watches Kubernetes cluster health
+   - Detects pod failures, node issues, resource problems
+   - Monitors every 1 second for real-time response
+
+2. **🚨 Issue Detection** triggers when problems are found
+   - CrashLoopBackOff pods
+   - ImagePullBackOff errors  
+   - Node status problems
+   - Resource exhaustion
+
+3. **🤖 Investigation Launch** calls DeterministicInvestigator
+   - Runs systematic cluster analysis
+   - Collects logs, events, and resource metrics
+   - Analyzes workloads and network configuration
+
+4. **📊 Data Collection & Analysis**
+   - Node health assessment
+   - Pod status evaluation  
+   - Resource utilization analysis
+   - Event timeline review
+   - k8sgpt AI-powered diagnostics
+
+5. **📝 Report Generation** creates structured findings
+   - Executive summary with severity levels
+   - Detailed findings by category
+   - Actionable recommendations
+   - Investigation steps executed
+
+6. **💾 File Storage** saves timestamped reports
+   - Location: `/root/reports/autonomous_report_YYYYMMDD_HHMMSS.txt`
+   - Human-readable text format
+   - Includes all findings and recommendations
+
+7. **🌐 Frontend Access** via REST API
+   - Endpoint: `GET /api/agents/reports/{filename}`
+   - Clickable links in live log stream
+   - Real-time report notifications
+
+### Report Content Structure
+
+Each investigation report includes:
+
+- **🎯 Executive Summary** - High-level cluster health status
+- **🚨 Critical Issues** - Immediate attention required  
+- **⚠️ High Priority Issues** - Schedule for resolution
+- **📋 All Findings by Category** - Comprehensive issue breakdown
+- **📊 Investigation Steps** - What was analyzed and when
+- **💡 Recommendations** - Prioritized action items
+- **🔗 Next Actions** - Suggested follow-up steps
+
 ## 🏗️ Kubernetes Cluster Architecture
 
 The demo cluster includes:
