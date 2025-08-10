@@ -57,12 +57,12 @@ graph LR
     end
 
     subgraph "Backend Coordination Script"
-        Orchestrator["🐍 FastAPI Server (Non-Agentic)"]
-        ChaosEngine["💥 Chaos Engine (Scripted Failures)"]
+        Orchestrator["🐍 FastAPI Server &#40;Non-Agentic&#41;"]
+        ChaosEngine["💥 Chaos Engine &#40;Scripted Failures&#41;"]
     end
 
     subgraph "Agent Layer"
-        Agent["🤖 AI Agent (Autonomous Healer)"]
+        Agent["🤖 AI Agent &#40;Autonomous Healer&#41;"]
     end
 
     subgraph "Kubernetes Environment"
@@ -103,7 +103,7 @@ graph LR
     class Orchestrator backend
     class ChaosEngine chaos
     class Agent agent
-    class K8sAPI,ClusterNodes k8s
+    class K8sAPI ClusterNodes k8s
     class Tools tools
 ```
 
