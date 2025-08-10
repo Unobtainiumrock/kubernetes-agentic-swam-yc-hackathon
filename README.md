@@ -172,7 +172,7 @@ graph TD
     C -->|Collects Data| D[📊 Cluster Analysis]
     D -->|Formats Findings| E[📝 Report Generator]
     E -->|Writes File| F[💾 /root/reports/autonomous_report_TIMESTAMP.txt]
-    F -->|Accessible via| G[🌐 Frontend /api/agents/reports/{filename}]
+    F -->|Accessible via| G["🌐 Frontend /api/agents/reports/{filename}"]
     
     style A fill:#f9d5e5,stroke:#333,stroke-width:2px
     style C fill:#e5f5e0,stroke:#333,stroke-width:2px
