@@ -1,2 +1,0 @@
-interplex
-k8sgpt-operator
