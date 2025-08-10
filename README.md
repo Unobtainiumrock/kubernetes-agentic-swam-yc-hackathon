@@ -13,37 +13,59 @@ The architecture is designed with clear separation of concerns: the **Frontend D
 This diagram shows the primary components and their basic relationships. The user interacts with the UI, which is powered by a simple FastAPI server. The coordination script is non-agentic - it just executes predefined chaos scenarios and coordinates the demo flow, while the AI agents autonomously monitor and heal the cluster.
 
 ```mermaid
-graph TB
-    subgraph "Frontend Layer"
+graph LR
+    subgraph "Frontend"
         UI["📈 React Dashboard"]
     end
 
-    subgraph "Backend Layer"
-        Orchestrator["🐍 FastAPI Server<br/>Non-Agentic Script<br/>Demo Control & Chaos Injection"]
+    subgraph "Backend Coordination Script"
+        Orchestrator["🐍 FastAPI Server"]
+        ChaosEngine["💥 Chaos Engine"]
     end
 
     subgraph "Agent Layer"
-        Swarm["🤖 AI Agent Swarm<br/>Autonomous Healing System"]
+        Agent["🤖 AI Agent"]
     end
 
-    subgraph "Infrastructure Layer"
-        K8s["☸️ Kubernetes Cluster<br/>(Kind)"]
+    subgraph "Kubernetes Environment"
+       K8sAPI["☸️ K8s API Server"]
+       ClusterNodes["Nodes & Pods"]
     end
 
-    UI <-->|WebSocket Stream| Orchestrator
-    Orchestrator -.->|Task Assignment| Swarm
-    Swarm <-->|Monitor & Heal| K8s
-    Orchestrator -->|Chaos Injection| K8s
+    subgraph "Tooling"
+        Tools["kubectl, k8sgpt, etc."]
+    end
 
-    classDef frontend fill:#d3e5ef,stroke:#333,stroke-width:2px
-    classDef backend fill:#e5f5e0,stroke:#333,stroke-width:2px
-    classDef agent fill:#f9d5e5,stroke:#333,stroke-width:2px
-    classDef infra fill:#fcf3cf,stroke:#333,stroke-width:2px
+    UI <-.->|WebSocket Stream| Orchestrator
+    
+    %% Non-agentic script manages demo and chaos
+    Orchestrator --> ChaosEngine
+    ChaosEngine -->|Executes Scripted Failure| K8sAPI
+    
+    %% AI Agent operates independently 
+    Agent -->|Detects Issues| Tools
+    Agent -->|Analyzes with AI| Tools
+    Tools -->|Queries cluster state| K8sAPI
+    K8sAPI -->|Returns cluster state| Tools
+    Tools -->|Returns diagnosis| Agent
+    Agent -->|Executes Healing| Tools
+    Agent -->|Streams Status/Actions| Orchestrator
 
-    class UI frontend
+    K8sAPI -->|State Changes| ClusterNodes
+
+    classDef ui fill:#d3e5ef,stroke:#333,stroke-width:1px
+    classDef backend fill:#e5f5e0,stroke:#333,stroke-width:1px
+    classDef chaos fill:#ffcccb,stroke:#333,stroke-width:1px
+    classDef agent fill:#f9d5e5,stroke:#333,stroke-width:1px
+    classDef k8s fill:#fcf3cf,stroke:#333,stroke-width:1px
+    classDef tools fill:#eeeeee,stroke:#333,stroke-width:1px
+
+    class UI ui
     class Orchestrator backend
-    class Swarm agent
-    class K8s infra
+    class ChaosEngine chaos
+    class Agent agent
+    class K8sAPI ClusterNodes k8s
+    class Tools tools
 ```
 
 ### Level 2: Agent & Cluster Interaction Workflow
