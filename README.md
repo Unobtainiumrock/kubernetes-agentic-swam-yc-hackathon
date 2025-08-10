@@ -166,18 +166,25 @@ The system includes an autonomous monitoring and investigation pipeline that det
 ### Investigation Trigger Flow
 
 ```mermaid
-graph TD
-    A[🔍 Autonomous Monitor] -->|Detects Issues| B[🚨 Issue Detection]
-    B -->|Triggers Investigation| C[🤖 DeterministicInvestigator]
-    C -->|Collects Data| D[📊 Cluster Analysis]
-    D -->|Formats Findings| E[📝 Report Generator]
-    E -->|Writes File| F[💾 /root/reports/autonomous_report_TIMESTAMP.txt]
-    F -->|Accessible via| G["🌐 Frontend /api/agents/reports/{filename}"]
+flowchart LR
+    A["🔍 Autonomous Monitor"] -->|"Detects Issues"| B["🚨 Issue Detection"]
+    B -->|"Triggers Investigation"| C["🤖 Deterministic Investigator"]
+    C -->|"Collects Data"| D["📊 Cluster Analysis"]
+    D -->|"Formats Findings"| E["📝 Report Generator"]
+    E -->|"Writes File"| F["💾 File Storage<br/>/root/reports/"]
+    F -->|"REST API"| G["🌐 Frontend Access<br/>/api/agents/reports/"]
     
-    style A fill:#f9d5e5,stroke:#333,stroke-width:2px
-    style C fill:#e5f5e0,stroke:#333,stroke-width:2px
-    style F fill:#fcf3cf,stroke:#333,stroke-width:2px
-    style G fill:#d3e5ef,stroke:#333,stroke-width:2px
+    classDef monitor fill:#f9d5e5,stroke:#333,stroke-width:3px,font-size:14px
+    classDef investigator fill:#e5f5e0,stroke:#333,stroke-width:3px,font-size:14px
+    classDef storage fill:#fcf3cf,stroke:#333,stroke-width:3px,font-size:14px
+    classDef frontend fill:#d3e5ef,stroke:#333,stroke-width:3px,font-size:14px
+    classDef process fill:#f0f0f0,stroke:#333,stroke-width:2px,font-size:14px
+    
+    class A monitor
+    class C investigator
+    class F storage
+    class G frontend
+    class B,D,E process
 ```
 
 ### Report Generation Process
