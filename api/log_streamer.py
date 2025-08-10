@@ -17,8 +17,8 @@ import os
 class LogStreamer:
     """Streams autonomous monitor logs to FastAPI backend"""
     
-    def __init__(self, backend_url: str = "http://localhost:8001"):
-        self.backend_url = backend_url
+    def __init__(self, backend_url: str = None):
+        self.backend_url = backend_url or os.getenv('BACKEND_URL', 'http://localhost:8001')
         self.session: Optional[aiohttp.ClientSession] = None
         self.logger = logging.getLogger(__name__)
         
@@ -129,7 +129,7 @@ class LogStreamer:
 class AutonomousMonitorStreamer:
     """Specialized streamer for autonomous monitor logs"""
     
-    def __init__(self, backend_url: str = "http://localhost:8001"):
+    def __init__(self, backend_url: str = None):
         self.streamer = LogStreamer(backend_url)
         self.agent_id = "autonomous_monitor"
         

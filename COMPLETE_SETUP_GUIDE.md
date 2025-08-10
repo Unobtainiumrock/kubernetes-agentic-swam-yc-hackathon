@@ -52,6 +52,23 @@ cd frontend
 npm start
 ```
 
+**Endpoints:**
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000 (direct connection)
+- API Docs: http://localhost:8000/docs
+- WebSocket: ws://localhost:3000/ws/agent-status (via Vite proxy)
+
+**Environment Configuration:**
+```bash
+# Cost-safe defaults (no AI API calls)
+export AGENT_SAFE_MODE=true          # Only monitoring + deterministic investigation
+export AGENT_AUTO_INVESTIGATE=true   # Auto-investigate with kubectl/k8sgpt
+
+# Optional: Enable AI investigations (requires OpenRouter API key)
+export AGENT_SAFE_MODE=false
+export OPENROUTER_API_KEY=your_key_here
+```
+
 ### Option 3: Host System with Script
 
 Run directly on your host system:
@@ -190,9 +207,15 @@ Changes to React components will automatically reload the browser.
 
 ### Backend Health
 
+**Development Setup (Container Environment):**
 - Health endpoint: http://localhost:8000/
 - API documentation: http://localhost:8000/docs
 - Agent logs endpoint: http://localhost:8000/api/agents/logs/stream
+
+**Docker Compose Setup:**
+- Health endpoint: http://localhost:8002/
+- API documentation: http://localhost:8002/docs
+- Agent logs endpoint: http://localhost:8002/api/agents/logs/stream
 
 ### Real-time Logs
 
@@ -212,6 +235,10 @@ You can test WebSocket connections directly:
 npm install -g wscat
 
 # Connect to agent status WebSocket
+# Development setup (via Vite proxy)
+wscat -c ws://localhost:3000/ws/agent-status
+
+# Or direct to backend (if no frontend running)
 wscat -c ws://localhost:8000/ws/agent-status
 ```
 

@@ -43,6 +43,12 @@ class ConnectionManager:
             self.active_connections[channel].discard(websocket)
             logger.info(f"Client disconnected from channel '{channel}'. Active connections: {len(self.active_connections[channel])}")
     
+    def get_active_connections_count(self, channel: str) -> int:
+        """Get the number of active connections in a channel"""
+        if channel not in self.active_connections:
+            return 0
+        return len(self.active_connections[channel])
+    
     async def send_personal_message(self, message: str, websocket: WebSocket):
         """Send a message to a specific WebSocket"""
         try:

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { FileText, Play, Pause, X, ExternalLink } from 'lucide-react'
+import { getApiUrl, getWsUrl } from '../config'
 
 const LiveLogStream = () => {
   const [logs, setLogs] = useState([])
-  const [isStreaming, setIsStreaming] = useState(true)
+  const [isStreaming, setIsStreaming] = useState(true)  // ✅ Default to ON
   const [filter, setFilter] = useState('all')
   const [wsConnected, setWsConnected] = useState(false)
   const [agentStatus, setAgentStatus] = useState({})
@@ -11,18 +12,21 @@ const LiveLogStream = () => {
   const wsRef = useRef(null)
   const reconnectTimeoutRef = useRef(null)
   const isMountedRef = useRef(true) // Track if component is mounted
+  const pollingIntervalRef = useRef(null) // For periodic log checks
 
-  // Safe state setter that checks if component is still mounted
+  // Safe state setter that checks if component is mounted
   const safeSetState = useCallback((setter, value) => {
     if (isMountedRef.current) {
       setter(value)
     }
   }, [])
 
-  // WebSocket connection function
+  // WebSocket connection function - AUTO-CONNECTS when streaming is true
   const connectWebSocket = useCallback(() => {
     // Don't connect if component is unmounted or not streaming
-    if (!isMountedRef.current || !isStreaming) return
+    if (!isMountedRef.current || !isStreaming) {
+      return
+    }
     
     // Don't create multiple connections
     if (wsRef.current?.readyState === WebSocket.CONNECTING || 
@@ -31,11 +35,10 @@ const LiveLogStream = () => {
     }
 
     try {
-      const wsUrl = `ws://localhost:8001/ws/agent-status`
+      const wsUrl = getWsUrl('/ws/agent-status')
       wsRef.current = new WebSocket(wsUrl)
 
       wsRef.current.onopen = () => {
-        console.log('WebSocket connected to agent status')
         safeSetState(setWsConnected, true)
       }
 
@@ -68,8 +71,7 @@ const LiveLogStream = () => {
         }
       }
 
-      wsRef.current.onclose = () => {
-        console.log('WebSocket disconnected')
+      wsRef.current.onclose = (event) => {
         safeSetState(setWsConnected, false)
         
         // Only reconnect if component is mounted, streaming, and no existing timeout
@@ -88,7 +90,7 @@ const LiveLogStream = () => {
         safeSetState(setWsConnected, false)
       }
     } catch (error) {
-      console.error('Failed to connect WebSocket:', error)
+      console.error('Failed to create WebSocket connection:', error)
       
       // Only reconnect if component is mounted, streaming, and no existing timeout
       if (isMountedRef.current && isStreaming && !reconnectTimeoutRef.current) {
@@ -102,8 +104,9 @@ const LiveLogStream = () => {
     }
   }, [isStreaming, safeSetState])
 
-  // WebSocket connection effect
+  // Effect to handle WebSocket connection based on streaming state
   useEffect(() => {
+    
     if (isStreaming) {
       // Small delay to ensure backend is ready
       const timeoutId = setTimeout(() => {
@@ -130,6 +133,9 @@ const LiveLogStream = () => {
 
   // Cleanup effect
   useEffect(() => {
+    // Initialize mounted state
+    isMountedRef.current = true
+    
     return () => {
       isMountedRef.current = false
       
@@ -152,7 +158,7 @@ const LiveLogStream = () => {
       if (!isMountedRef.current) return
       
       try {
-        const response = await fetch('http://localhost:8001/api/agents/logs/stream?limit=20')
+        const response = await fetch(getApiUrl('/api/agents/logs/stream?limit=20'))
         if (response.ok && isMountedRef.current) {
           const initialLogs = await response.json()
           const formattedLogs = initialLogs.map((log, index) => ({
@@ -171,8 +177,26 @@ const LiveLogStream = () => {
     }
 
     // Delay initial fetch to ensure backend is ready
-    const timeoutId = setTimeout(fetchInitialLogs, 2000)
-    return () => clearTimeout(timeoutId)
+    const timeoutId = setTimeout(() => {
+      if (isMountedRef.current) {
+        fetchInitialLogs()
+        
+        // Start periodic polling as fallback (every 10 seconds)
+        pollingIntervalRef.current = setInterval(() => {
+          if (isMountedRef.current && isStreaming) {
+            fetchInitialLogs()
+          }
+        }, 10000)
+      }
+    }, 2000)
+    
+    return () => {
+      clearTimeout(timeoutId)
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current)
+        pollingIntervalRef.current = null
+      }
+    }
   }, [safeSetState])
 
   // Toggle streaming
@@ -212,7 +236,7 @@ const LiveLogStream = () => {
         <div className="flex items-center space-x-2">
           <span>{log.message}</span>
           <button 
-            onClick={() => window.open(`http://localhost:8001/reports/${log.details.report_file.split('/').pop()}`, '_blank')}
+                                onClick={() => window.open(getApiUrl(`/reports/${log.details.report_file.split('/').pop()}`), '_blank')}
             className="inline-flex items-center px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
           >
             <ExternalLink className="h-3 w-3 mr-1" />
@@ -238,7 +262,7 @@ const LiveLogStream = () => {
   }
 
   const filteredLogs = filter === 'all' ? logs : logs.filter(log => log.level === filter)
-
+  
   const formatTimestamp = (timestamp) => {
     return new Date(timestamp).toLocaleTimeString()
   }

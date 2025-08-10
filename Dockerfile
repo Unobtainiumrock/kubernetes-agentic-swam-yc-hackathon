@@ -13,6 +13,7 @@ RUN apt update \
     sudo \
     python3 \
     python3-pip \
+    python3-venv \
     vim-nox \
     net-tools \
     telnet \
@@ -59,8 +60,21 @@ RUN curl -LO https://github.com/k8sgpt-ai/k8sgpt/releases/download/v0.4.22/k8sgp
 #    usermod -aG docker user
 
 WORKDIR /root
-#COPY requirements.txt .
-#RUN pip3 install -r requirements.txt
+
+# Copy requirements files first for better Docker layer caching
+COPY backend/requirements.txt ./backend/requirements.txt
+COPY api/requirements.txt ./api/requirements.txt
+COPY backend/google-adk/requirements.txt ./backend/google-adk/requirements.txt
+
+# Install Python dependencies (override externally-managed-environment)
+RUN pip3 install --break-system-packages -r backend/requirements.txt && \
+    pip3 install --break-system-packages -r api/requirements.txt && \
+    pip3 install --break-system-packages -r backend/google-adk/requirements.txt
+
+# Copy the rest of the code
 COPY . .
+
+# Set ADK configuration path
+ENV ADK_CONFIG_PATH="/root/backend/google-adk/src/adk_agent/config/runtime.yaml"
 
 #ENTRYPOINT ["/root/entrypoint"]

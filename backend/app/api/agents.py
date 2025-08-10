@@ -12,6 +12,9 @@ from typing import List, Dict, Optional
 from datetime import datetime
 from pydantic import BaseModel
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -206,6 +209,8 @@ async def get_recent_logs(
 @router.post("/logs/add")
 async def add_agent_log(log_entry: AgentLogEntry):
     """Add a new log entry (used by autonomous monitor)"""
+    print(f"🔥 DEBUG: add_agent_log called with message: {log_entry.message[:50]}...")
+    logger.info(f"🔥 add_agent_log called with message: {log_entry.message[:50]}...")
     RECENT_LOGS.append(log_entry)
     
     # Keep only last 1000 logs in memory
@@ -213,12 +218,17 @@ async def add_agent_log(log_entry: AgentLogEntry):
         RECENT_LOGS.pop(0)
     
     # Broadcast to WebSocket clients
-    from ..websockets import connection_manager
-    log_data = {
-        "type": "agent_log",
-        "data": log_entry.dict()
-    }
-    await connection_manager.broadcast_json_to_channel(log_data, "agent-status")
+    try:
+        from ..websockets import connection_manager
+        log_data = {
+            "type": "agent_log",
+            "data": log_entry.dict()
+        }
+        logger.info(f"📡 Broadcasting log to {connection_manager.get_active_connections_count('agent-status')} clients")
+        await connection_manager.broadcast_json_to_channel(log_data, "agent-status")
+        logger.info("✅ Broadcast completed")
+    except Exception as e:
+        logger.error(f"❌ Broadcast failed: {e}")
     
     return {"status": "success", "message": "Log entry added"}
 
@@ -233,7 +243,9 @@ async def update_agent_status(status: AgentStreamStatus):
         "type": "agent_status_update",
         "data": status.dict()
     }
+    logger.info(f"📊 Broadcasting status to {connection_manager.get_active_connections_count('agent-status')} clients")
     await connection_manager.broadcast_json_to_channel(status_data, "agent-status")
+    logger.info("✅ Status broadcast completed")
     
     return {"status": "success", "message": "Agent status updated"}
 

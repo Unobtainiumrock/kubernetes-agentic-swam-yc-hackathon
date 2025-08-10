@@ -3,44 +3,51 @@
 echo "🎯 Kubernetes Autonomous Agent Streaming Stack"
 echo "=============================================="
 
-# Check if we're inside the container
-if [ -f "/.dockerenv" ]; then
-    echo "✅ Running inside container"
-    INSIDE_CONTAINER=true
-else
-    echo "⚠️  Running outside container - will use host Python"
-    INSIDE_CONTAINER=false
+# Load environment variables from .env files if they exist
+if [ -f ".env" ]; then
+    echo "📁 Loading environment from .env"
+    export $(cat .env | grep -v '^#' | xargs)
 fi
 
-# Function to install dependencies if needed
-install_dependencies() {
-    echo "🔍 Checking Python dependencies..."
+if [ -f "backend/google-adk/.env" ]; then
+    echo "📁 Loading ADK environment from backend/google-adk/.env"
+    export $(cat backend/google-adk/.env | grep -v '^#' | xargs)
+fi
+
+# Set cost-safe defaults
+export AGENT_SAFE_MODE="${AGENT_SAFE_MODE:-true}"
+export AGENT_AUTO_INVESTIGATE="${AGENT_AUTO_INVESTIGATE:-true}"
+
+echo "🛡️  Agent Configuration:"
+echo "   SAFE_MODE: $AGENT_SAFE_MODE (true = no AI API calls, false = may use OpenRouter)"
+echo "   AUTO_INVESTIGATE: $AGENT_AUTO_INVESTIGATE (true = auto investigate issues, false = monitor only)"
+
+# Setup signal handlers for graceful shutdown
+BACKEND_PID=""
+MONITOR_PID=""
+
+cleanup() {
+    echo ""
+    echo "🛑 Stopping services..."
     
-    if ! python3 -c "import aiohttp" 2>/dev/null; then
-        echo "📦 Installing aiohttp..."
-        pip3 install aiohttp>=3.8.0 --break-system-packages 2>/dev/null || \
-        pip3 install aiohttp>=3.8.0 --user || \
-        pip3 install aiohttp>=3.8.0
+    if [ ! -z "$BACKEND_PID" ] && kill -0 $BACKEND_PID 2>/dev/null; then
+        echo "  Stopping backend (PID: $BACKEND_PID)..."
+        kill $BACKEND_PID
+        wait $BACKEND_PID 2>/dev/null
     fi
     
-    if ! python3 -c "import fastapi" 2>/dev/null; then
-        echo "📦 Installing FastAPI requirements..."
-        if [ -f "backend/requirements.txt" ]; then
-            pip3 install -r backend/requirements.txt --break-system-packages 2>/dev/null || \
-            pip3 install -r backend/requirements.txt --user || \
-            pip3 install -r backend/requirements.txt
-        fi
+    if [ ! -z "$MONITOR_PID" ] && kill -0 $MONITOR_PID 2>/dev/null; then
+        echo "  Stopping autonomous monitor (PID: $MONITOR_PID)..."
+        kill $MONITOR_PID
+        wait $MONITOR_PID 2>/dev/null
     fi
     
-    if ! python3 -c "import dateutil" 2>/dev/null; then
-        echo "📦 Installing python-dateutil..."
-        pip3 install python-dateutil --break-system-packages 2>/dev/null || \
-        pip3 install python-dateutil --user || \
-        pip3 install python-dateutil
-    fi
-    
-    echo "✅ Dependencies ready"
+    echo "✅ All services stopped"
+    exit 0
 }
+
+# Trap signals for graceful shutdown
+trap cleanup SIGINT SIGTERM
 
 # Function to start backend
 start_backend() {
@@ -49,8 +56,8 @@ start_backend() {
     cd backend
     export PYTHONPATH="${PWD}:${PYTHONPATH}"
     
-    # Start backend in background
-    python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload &
+    # Start backend in background (without reload to avoid file watcher issues)
+    python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
     BACKEND_PID=$!
     
     cd ..
@@ -79,7 +86,7 @@ start_autonomous_monitor() {
     
     cd api
     export PYTHONPATH="${PWD}:${PYTHONPATH}"
-    export BACKEND_URL="http://localhost:8001"
+    export BACKEND_URL="http://localhost:8000"
     
     # Create reports directory
     mkdir -p /root/reports 2>/dev/null || mkdir -p $HOME/reports
@@ -94,33 +101,7 @@ start_autonomous_monitor() {
     echo "📝 Reports will be saved to: /root/reports/ or $HOME/reports/"
 }
 
-# Function to cleanup processes
-cleanup() {
-    echo ""
-    echo "🛑 Stopping services..."
-    
-    if [ ! -z "$BACKEND_PID" ]; then
-        kill $BACKEND_PID 2>/dev/null
-        echo "✅ Backend stopped"
-    fi
-    
-    if [ ! -z "$MONITOR_PID" ]; then
-        kill $MONITOR_PID 2>/dev/null
-        echo "✅ Autonomous monitor stopped"
-    fi
-    
-    echo "👋 Cleanup complete!"
-    exit 0
-}
-
-# Set up signal handlers
-trap cleanup SIGINT SIGTERM
-
-# Main execution
 main() {
-    # Install dependencies
-    install_dependencies
-    
     # Start backend
     if ! start_backend; then
         echo "❌ Failed to start backend"
@@ -140,10 +121,11 @@ main() {
     echo "📝 API Documentation: http://localhost:8000/docs"
     echo "🔄 WebSocket endpoint: ws://localhost:8000/ws/agent-status"
     echo ""
-    echo "📋 Available endpoints:"
-    echo "  GET  /api/agents/logs/stream - Get recent logs"
-    echo "  GET  /api/agents/status/current - Get agent status"
-    echo "  GET  /api/agents/reports/{filename} - Get investigation reports"
+    echo "📋 Key endpoints:"
+    echo "  GET  /api/agents/ - Agent status"
+    echo "  GET  /api/cluster/ - Cluster status"
+    echo "  POST /api/adk/v1/agent/run - AI agent chat"
+    echo "  GET  /api/adk/status - ADK integration status"
     echo ""
     echo "🚀 To start the frontend:"
     echo "  cd frontend && npm start"
@@ -151,7 +133,7 @@ main() {
     echo "Press Ctrl+C to stop all services"
     echo "=============================================="
     
-    # Keep script running
+    # Keep script running and monitor processes
     while true; do
         # Check if processes are still running
         if ! kill -0 $BACKEND_PID 2>/dev/null; then

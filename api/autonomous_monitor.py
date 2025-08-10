@@ -27,13 +27,19 @@ from log_streamer import AutonomousMonitorStreamer
 class AutonomousMonitor:
     """Autonomous monitor with intelligent issue detection - Chunk 2 implementation."""
     
-    def __init__(self):
+    def __init__(self, safe_mode=None):
         self.running = False
         self.kubectl = KubectlWrapper()
         self.check_interval = 1  # 1 second for live demo
         self.investigation_in_progress = False
         self.last_investigation_time = None
         self.streamer = None
+        
+        # COST-SAFE CONFIGURATION - Read from environment
+        if safe_mode is None:
+            safe_mode = os.getenv('AGENT_SAFE_MODE', 'true').lower() == 'true'
+        self.safe_mode = safe_mode  # Only monitoring + deterministic investigation (no AI calls)
+        self.auto_investigate = os.getenv('AGENT_AUTO_INVESTIGATE', 'true').lower() == 'true'
         
         # Setup logging
         logging.basicConfig(
@@ -45,6 +51,12 @@ class AutonomousMonitor:
         # Setup graceful shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
+        
+        # Log safe mode status
+        if self.safe_mode:
+            print("🛡️  SAFE MODE: Only monitoring + deterministic investigation (no AI API calls)")
+        else:
+            print("⚠️  FULL MODE: AI investigations enabled (may use OpenRouter API credits)")
     
     def _signal_handler(self, signum, frame):
         """Handle Ctrl+C gracefully."""
@@ -350,19 +362,30 @@ class AutonomousMonitor:
         if len(issues) > 3:
             print(f"   ... and {len(issues) - 3} more issues")
         
-        print(f"\n🤖 Starting deterministic investigation...")
-        
         # Stream to backend
         if self.streamer:
             await self.streamer.log_issues_detected(len(issues), issues_summary)
+        
+        # Check if auto-investigation is enabled
+        if not self.auto_investigate:
+            print(f"🔍 Auto-investigation disabled - only monitoring")
+            return
+        
+        print(f"\n🤖 Starting {'SAFE' if self.safe_mode else 'FULL'} investigation...")
         
         # Mark investigation as in progress
         self.investigation_in_progress = True
         self.last_investigation_time = datetime.now()
         
         try:
-            # Run deterministic investigation in background
-            investigator = DeterministicInvestigator()
+            # Run SAFE deterministic investigation (no AI API calls)
+            if self.safe_mode:
+                print("🛡️  Using deterministic investigator (no API costs)")
+                investigator = DeterministicInvestigator()
+            else:
+                print("⚠️  Full mode: Could use AI investigator (may cost credits)")
+                # For now, still use deterministic even in full mode for safety
+                investigator = DeterministicInvestigator()
             
             # Create timestamp for report filename
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

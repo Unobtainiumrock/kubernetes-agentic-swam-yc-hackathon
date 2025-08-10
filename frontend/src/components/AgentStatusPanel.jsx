@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Activity, AlertTriangle, CheckCircle, Bot, Clock } from 'lucide-react'
+import { getApiUrl, getWsUrl } from '../config'
 
 const AgentStatusPanel = () => {
   const [agentStatus, setAgentStatus] = useState({})
   const [wsConnected, setWsConnected] = useState(false)
   const reconnectTimeoutRef = useRef(null)
   const isMountedRef = useRef(true) // Track if component is mounted
+  const pollingIntervalRef = useRef(null) // For periodic status checks
+  const [lastUpdate, setLastUpdate] = useState(null)
 
-  // Safe state setter that checks if component is still mounted
+  // Safe state setter that checks if component is mounted
   const safeSetState = useCallback((setter, value) => {
     if (isMountedRef.current) {
       setter(value)
@@ -15,19 +18,20 @@ const AgentStatusPanel = () => {
   }, [])
 
   useEffect(() => {
-    // Fetch initial status
-    const fetchStatus = async () => {
+    // Initial fetch of agent status
+    const fetchAgentStatus = async () => {
       if (!isMountedRef.current) return
       
       try {
-        const response = await fetch('http://localhost:8001/api/agents/status/current')
-        if (response.ok && isMountedRef.current) {
-          const statusList = await response.json()
+        const response = await fetch(getApiUrl('/api/agents'))
+        if (response.ok) {
+          const agents = await response.json()
           const statusMap = {}
-          statusList.forEach(status => {
-            statusMap[status.agent_id] = status
+          agents.forEach(agent => {
+            statusMap[agent.agent_id] = agent
           })
           safeSetState(setAgentStatus, statusMap)
+          safeSetState(setLastUpdate, new Date())
         }
       } catch (error) {
         console.error('Failed to fetch agent status:', error)
@@ -39,9 +43,11 @@ const AgentStatusPanel = () => {
       if (!isMountedRef.current) return
       
       try {
-        const ws = new WebSocket('ws://localhost:8001/ws/agent-status')
+        const wsUrl = getWsUrl('/ws/agent-status')
+        const ws = new WebSocket(wsUrl)
         
         ws.onopen = () => {
+          console.log('WebSocket connected to agent status panel')
           safeSetState(setWsConnected, true)
         }
 
@@ -55,6 +61,7 @@ const AgentStatusPanel = () => {
                 ...prev,
                 [data.data.agent_id]: data.data
               }))
+              safeSetState(setLastUpdate, new Date())
             }
           } catch (e) {
             console.error('Error parsing WebSocket message:', e)
@@ -62,6 +69,7 @@ const AgentStatusPanel = () => {
         }
 
         ws.onclose = () => {
+          console.log('WebSocket disconnected from agent status panel')
           safeSetState(setWsConnected, false)
           // Only reconnect if component is mounted and no existing timeout
           if (isMountedRef.current && !reconnectTimeoutRef.current) {
@@ -72,6 +80,11 @@ const AgentStatusPanel = () => {
               }
             }, 3000)
           }
+        }
+
+        ws.onerror = (error) => {
+          console.error('WebSocket error:', error)
+          safeSetState(setWsConnected, false)
         }
 
         return ws
@@ -92,8 +105,15 @@ const AgentStatusPanel = () => {
     // Delay initial fetch and WebSocket connection to ensure backend is ready
     const timeoutId = setTimeout(() => {
       if (isMountedRef.current) {
-        fetchStatus()
+        fetchAgentStatus()
         const ws = connectWebSocket()
+        
+        // Start periodic polling as fallback (every 5 seconds)
+        pollingIntervalRef.current = setInterval(() => {
+          if (isMountedRef.current) {
+            fetchAgentStatus()
+          }
+        }, 5000)
         
         // Cleanup function
         return () => {
@@ -112,6 +132,12 @@ const AgentStatusPanel = () => {
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current)
         reconnectTimeoutRef.current = null
+      }
+      
+      // Clear polling interval
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current)
+        pollingIntervalRef.current = null
       }
     }
   }, [safeSetState])

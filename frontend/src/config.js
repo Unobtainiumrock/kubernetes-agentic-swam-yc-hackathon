@@ -6,12 +6,12 @@ export const API_CONFIG = {
   // In production, use same domain (Netlify Functions)
   baseURL: import.meta.env.PROD 
     ? ''  // Same domain - Netlify will route /api/* to functions
-    : 'http://localhost:8000',
+    : 'http://localhost:3000',  // Use Vite dev server for proxying
   
-  // WebSocket URL (Note: Netlify Functions don't support WebSockets directly)
+  // WebSocket URL - Use Vite proxy in development
   wsURL: import.meta.env.PROD
     ? 'wss://your-netlify-app.netlify.app'   // You'll need WebSocket service for production
-    : 'ws://localhost:8000',
+    : 'ws://localhost:3000',  // Use Vite dev server proxy
     
   // API endpoints
   endpoints: {

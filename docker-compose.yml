@@ -7,7 +7,7 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     ports:
-      - "8001:8000"
+      - "8002:8000"
     volumes:
       - ./reports:/root/reports
       - /var/run/docker.sock:/var/run/docker.sock
@@ -52,7 +52,7 @@ services:
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public
     environment:
-      - REACT_APP_BACKEND_URL=http://localhost:8001
+      - REACT_APP_BACKEND_URL=http://backend:8000
       - CHOKIDAR_USEPOLLING=true
     networks:
       - agent-network

@@ -1,3 +1,10 @@
 .kube
 .config
 .local
+.bash_history
+.cache
+node_modules
+.git
+.env
+*.log
+.DS_Store
