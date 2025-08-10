@@ -52,15 +52,5 @@ RUN wget https://github.com/derailed/k9s/releases/latest/download/k9s_linux_amd6
 
 RUN curl -LO https://github.com/k8sgpt-ai/k8sgpt/releases/download/v0.4.22/k8sgpt_amd64.deb && dpkg -i k8sgpt_amd64.deb && rm k8sgpt_amd64.deb
 
-#RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && \
-#    useradd -m user -d /root -s /bin/bash && echo "user:user" | chpasswd && \
-#    adduser user sudo && \
-#    groupadd docker && \
-#    usermod -aG docker user
-
 WORKDIR /root
-#COPY requirements.txt .
-#RUN pip3 install -r requirements.txt
 COPY . .
-
-#ENTRYPOINT ["/root/entrypoint"]
