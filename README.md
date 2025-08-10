@@ -166,7 +166,7 @@ The system includes an autonomous monitoring and investigation pipeline that det
 ### Investigation Trigger Flow
 
 ```mermaid
-flowchart LR
+flowchart TD
     A[🔍 Autonomous Monitor] --> B[🚨 Issue Detection]
     B --> C[🤖 Deterministic Investigator]
     C --> D[📊 Cluster Analysis]
@@ -186,6 +186,8 @@ flowchart LR
     class G frontend
     class B,D,E process
 ```
+
+This vertical flow is much more intuitive for showing the sequential steps of the investigation process, making it easier to follow the pipeline from issue detection all the way to frontend access! 🎯
 
 ### Report Generation Process
 
