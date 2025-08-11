@@ -64,15 +64,15 @@ echo -e "${YELLOW}⏳ Waiting for cluster to be fully ready...${NC}"
 kubectl wait --for=condition=Ready nodes --all --timeout=300s
 
 # Install NGINX Ingress Controller
-# echo -e "${BLUE}🌐 Installing NGINX Ingress Controller...${NC}"
-# kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+echo -e "${BLUE}🌐 Installing NGINX Ingress Controller...${NC}"
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
 
-# # Wait for ingress controller to be ready
-# echo -e "${YELLOW}⏳ Waiting for NGINX Ingress Controller to be ready...${NC}"
-# kubectl wait --namespace ingress-nginx \
-#   --for=condition=ready pod \
-#   --selector=app.kubernetes.io/component=controller \
-#   --timeout=300s
+# Wait for ingress controller to be ready
+echo -e "${YELLOW}⏳ Waiting for NGINX Ingress Controller to be ready...${NC}"
+kubectl wait --namespace ingress-nginx \
+  --for=condition=ready pod \
+  --selector=app.kubernetes.io/component=controller \
+  --timeout=300s
 
 # Install Metrics Server (for HPA and resource monitoring)
 echo -e "${BLUE}📊 Installing Metrics Server...${NC}"

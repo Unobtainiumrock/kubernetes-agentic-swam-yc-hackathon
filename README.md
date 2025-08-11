@@ -159,6 +159,90 @@ graph TD
     class R1,R2,R3 rest
 ```
 
+## 🏗️ Backend vs API Directory Architecture
+
+Understanding the separation between `backend/` and `api/` directories is crucial for working with this system:
+
+### **📡 `backend/` - Web Application Layer**
+**Purpose:** FastAPI web server that provides HTTP/WebSocket endpoints
+
+**Responsibilities:**
+- 🌐 **HTTP REST API** endpoints (`/api/agents`, `/api/cluster`, etc.)
+- 🔌 **WebSocket connections** for real-time streaming
+- 🎯 **Request routing** and response formatting
+- 🔧 **CORS middleware** for frontend integration
+- 📊 **Data aggregation** from various sources
+
+**Key files:**
+- `main.py` - FastAPI application setup
+- `app/api/agents.py` - Agent status endpoints
+- `app/api/cluster.py` - Cluster information endpoints  
+- `app/api/adk_agent.py` - Google ADK integration endpoints
+- `app/websockets/` - WebSocket connection management
+
+### **🤖 `api/` - Autonomous Agent Layer**
+**Purpose:** Standalone monitoring and investigation agents
+
+**Responsibilities:**
+- 🔍 **Autonomous monitoring** of Kubernetes cluster
+- 🚨 **Issue detection** (CrashLoopBackOff, ImagePullBackOff, etc.)
+- 🤖 **Investigation agents** (Deterministic & Agentic)
+- 📝 **Report generation** and file writing
+- 🛠️ **kubectl/k8sgpt wrapper tools**
+
+**Key files:**
+- `autonomous_monitor.py` - Main monitoring process
+- `agents/` - Investigation agent implementations
+- `log_streamer.py` - Sends data to backend
+- Demo/test files for agent development
+
+### **🔄 How They Work Together**
+
+```mermaid
+flowchart TD
+    A[🌐 Frontend Dashboard] -->|HTTP/WebSocket| B[📡 Backend FastAPI]
+    B -->|Receives logs via HTTP| C[🤖 API Autonomous Monitor]
+    C -->|Monitors| D[☸️ Kubernetes Cluster]
+    C -->|Generates| E[📝 Investigation Reports]
+    B -->|Serves reports| A
+    
+    classDef frontend fill:#d3e5ef,stroke:#333,stroke-width:2px
+    classDef backend fill:#e5f5e0,stroke:#333,stroke-width:2px
+    classDef agents fill:#f9d5e5,stroke:#333,stroke-width:2px
+    classDef k8s fill:#fcf3cf,stroke:#333,stroke-width:2px
+    
+    class A frontend
+    class B backend
+    class C agents
+    class D,E k8s
+```
+
+### **🎯 Why This Separation?**
+
+**✅ Benefits:**
+
+1. **🔀 Separation of Concerns**
+   - Backend = Web interface/API layer
+   - API = Business logic/autonomous agents
+
+2. **🔄 Independent Execution**
+   - Backend can run without agents (for UI development)
+   - Agents can run without backend (for testing)
+
+3. **📦 Different Dependencies**
+   - Backend: FastAPI, WebSocket libraries
+   - API: Kubernetes tools, AI libraries
+
+4. **🚀 Scalability** 
+   - Can run multiple agent instances
+   - Backend handles multiple concurrent users
+
+**💡 Summary:**
+- **`backend/`** = "The web server that talks to users"
+- **`api/`** = "The autonomous agents that watch Kubernetes"
+
+It's essentially a **microservices architecture** where the web layer and agent layer are separated but communicate via HTTP! 🎯
+
 ## 🔄 Autonomous Investigation & Report Flow
 
 The system includes an autonomous monitoring and investigation pipeline that detects issues and generates detailed reports:
