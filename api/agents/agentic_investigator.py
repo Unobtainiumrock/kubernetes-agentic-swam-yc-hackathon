@@ -12,8 +12,10 @@ from typing import Dict, List, Optional, Any
 import time
 from datetime import datetime
 
-# Add Google ADK to path
-sys.path.append('/Users/chalmers/code/kubernetes-agentic-swam-yc-hackathon/google-adk/src')
+# Add Google ADK to path (use proper relative path)
+google_adk_path = os.path.join(os.path.dirname(__file__), "../../backend/google-adk/src")
+if google_adk_path not in sys.path:
+    sys.path.append(google_adk_path)
 
 from .base_investigator import BaseInvestigator
 from .tools.kubectl_wrapper import KubectlWrapper

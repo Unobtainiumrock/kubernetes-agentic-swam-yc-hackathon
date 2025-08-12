@@ -1,5 +1,5 @@
 IMAGE_NAME ?= dfkozlov/adk-agent-api:dev
-ENV_FILE ?= /Users/chalmers/code/kubernetes-agentic-swam-yc-hackathon/google-adk/.env
+ENV_FILE ?= ../backend/google-adk/.env
 ENV_OPT := $(shell [ -f $(ENV_FILE) ] && echo --env-file $(ENV_FILE))
 
 .PHONY: api-build api-run api-logs api-stop api-clean

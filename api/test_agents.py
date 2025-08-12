@@ -199,7 +199,10 @@ async def test_tool_availability():
     # Test Google ADK
     try:
         import sys
-        sys.path.append('/Users/chalmers/code/kubernetes-agentic-swam-yc-hackathon/google-adk/src')
+        # Add Google ADK to path (use proper relative path)
+        google_adk_path = os.path.join(os.path.dirname(__file__), "../backend/google-adk/src")
+        if google_adk_path not in sys.path:
+            sys.path.append(google_adk_path)
         from adk_agent.agents.core_agent import create_core_agent
         
         config = {"model": "openai/gpt-4o-mini", "provider": "openrouter"}
