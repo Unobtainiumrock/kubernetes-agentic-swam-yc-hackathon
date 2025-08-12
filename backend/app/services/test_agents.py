@@ -12,11 +12,10 @@ import os
 import json
 from datetime import datetime
 
-# Add the api directory to Python path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Using proper relative imports - no path manipulation needed
 
-from agents.deterministic_investigator import DeterministicInvestigator, run_deterministic_investigation
-from agents.agentic_investigator import AgenticInvestigator, run_agentic_investigation
+from ..agents.deterministic_investigator import DeterministicInvestigator, run_deterministic_investigation
+from ..agents.agentic_investigator import AgenticInvestigator, run_agentic_investigation
 
 
 async def test_deterministic_agent():
@@ -174,7 +173,7 @@ async def test_tool_availability():
     
     # Test kubectl
     try:
-        from agents.tools.kubectl_wrapper import KubectlWrapper
+        from ..agents.tools.kubectl_wrapper import KubectlWrapper
         kubectl = KubectlWrapper()
         result = await kubectl.get_version()
         if result["success"]:
@@ -186,7 +185,7 @@ async def test_tool_availability():
     
     # Test k8sgpt
     try:
-        from agents.tools.k8sgpt_wrapper import K8sgptWrapper
+        from ..agents.tools.k8sgpt_wrapper import K8sgptWrapper
         k8sgpt = K8sgptWrapper()
         result = await k8sgpt.get_version()
         if result["success"]:

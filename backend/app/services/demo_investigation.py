@@ -6,16 +6,13 @@ This script demonstrates both deterministic and agentic investigation
 approaches for hackathon presentation.
 """
 import asyncio
-import sys
-import os
 import json
 from datetime import datetime
 
-# Add the api directory to Python path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Using proper relative imports - no path manipulation needed
 
-from agents.deterministic_investigator import run_deterministic_investigation
-from agents.agentic_investigator import run_agentic_investigation
+from ..agents.deterministic_investigator import run_deterministic_investigation
+from ..agents.agentic_investigator import run_agentic_investigation
 
 
 def print_banner():

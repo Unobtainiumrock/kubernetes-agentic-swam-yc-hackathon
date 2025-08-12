@@ -15,8 +15,7 @@ import os
 from datetime import datetime
 import signal
 
-# Add the api directory to Python path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Using proper relative imports - no path manipulation needed
 
 from ..agents.tools.kubectl_wrapper import KubectlWrapper
 from ..agents.deterministic_investigator import DeterministicInvestigator
