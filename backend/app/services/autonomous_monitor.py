@@ -27,19 +27,29 @@ from .log_streamer import AutonomousMonitorStreamer
 class AutonomousMonitor:
     """Autonomous monitor with intelligent issue detection - Chunk 2 implementation."""
     
-    def __init__(self, safe_mode=None):
+    def __init__(self, safe_mode=None, auto_investigate=None, check_interval=None, backend_url=None):
         self.running = False
         self.kubectl = KubectlWrapper()
-        self.check_interval = 1  # 1 second for live demo
         self.investigation_in_progress = False
         self.last_investigation_time = None
         self.streamer = None
         
-        # COST-SAFE CONFIGURATION - Read from environment
+        # COST-SAFE CONFIGURATION - Use provided params or environment defaults
         if safe_mode is None:
             safe_mode = os.getenv('AGENT_SAFE_MODE', 'true').lower() == 'true'
         self.safe_mode = safe_mode  # Only monitoring + deterministic investigation (no AI calls)
-        self.auto_investigate = os.getenv('AGENT_AUTO_INVESTIGATE', 'true').lower() == 'true'
+        
+        if auto_investigate is None:
+            auto_investigate = os.getenv('AGENT_AUTO_INVESTIGATE', 'true').lower() == 'true'
+        self.auto_investigate = auto_investigate
+        
+        if check_interval is None:
+            check_interval = int(os.getenv('AGENT_CHECK_INTERVAL', '30'))
+        self.check_interval = check_interval
+        
+        if backend_url is None:
+            backend_url = os.getenv('BACKEND_URL', 'http://localhost:8000')
+        self.backend_url = backend_url
         
         # Setup logging
         logging.basicConfig(
@@ -522,7 +532,7 @@ End of Report
     
     async def health_check_loop(self):
         """Enhanced health check loop with issue detection and autonomous investigation."""
-        print("🔄 Starting enhanced health check loop (every 1 second)")
+        print(f"🔄 Starting enhanced health check loop (every {self.check_interval} second(s))")
         print("   🔍 Automatic investigation triggers on issues detected")
         print("   Press Ctrl+C to stop monitoring")
         print()
@@ -579,9 +589,9 @@ End of Report
         
         # Initialize streamer
         try:
-            self.streamer = AutonomousMonitorStreamer()
+            self.streamer = AutonomousMonitorStreamer(backend_url=self.backend_url)
             await self.streamer.__aenter__()
-            print("✅ Log streaming initialized")
+            print(f"✅ Log streaming initialized (backend: {self.backend_url})")
         except Exception as e:
             print(f"⚠️  Log streaming not available: {e}")
             self.streamer = None
