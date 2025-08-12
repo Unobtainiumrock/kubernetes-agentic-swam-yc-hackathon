@@ -240,6 +240,120 @@ class KubectlWrapper:
         result = await self._run_kubectl(["get", "namespaces", "-o", "json"])
         if result["success"]:
             try:
+                return {
+                    "success": True,
+                    "namespaces": json.loads(result["output"])
+                }
+            except json.JSONDecodeError:
+                return {"error": "Failed to parse JSON output", "success": False}
+        return {"error": result["error"], "success": False}
+    
+    async def get_cluster_info(self) -> Dict[str, Any]:
+        """Get cluster information."""
+        result = await self._run_kubectl(["cluster-info"])
+        if result["success"]:
+            return {
+                "success": True,
+                "cluster_info": result["output"]
+            }
+        return {"error": result["error"], "success": False}
+    
+    async def get_version(self) -> Dict[str, Any]:
+        """Get Kubernetes version information."""
+        result = await self._run_kubectl(["version", "-o", "json"])
+        if result["success"]:
+            try:
+                return {
+                    "success": True,
+                    "version_info": json.loads(result["output"])
+                }
+            except json.JSONDecodeError:
+                return {"error": "Failed to parse JSON output", "success": False}
+        return {"error": result["error"], "success": False}
+    
+    async def get_pods(self, namespace: str = None) -> Dict[str, Any]:
+        """Get pods in a specific namespace (alias for get_all_pods)."""
+        return await self.get_all_pods(namespace)
+    
+    async def describe_nodes(self) -> Dict[str, Any]:
+        """Describe all nodes in the cluster."""
+        result = await self._run_kubectl(["describe", "nodes"])
+        if result["success"]:
+            return {
+                "success": True,
+                "output": result["output"]
+            }
+        return {"error": result["error"], "success": False}
+    
+    async def get_node_metrics(self) -> Dict[str, Any]:
+        """Get node metrics (alias for get_resource_usage)."""
+        usage = await self.get_resource_usage()
+        if usage.get("metrics_available"):
+            return {
+                "success": True,
+                "metrics": usage.get("node_metrics", "")
+            }
+        return {"error": usage.get("error", "Metrics not available"), "success": False}
+    
+    async def get_pod_metrics(self) -> Dict[str, Any]:
+        """Get pod metrics (alias for get_resource_usage)."""
+        usage = await self.get_resource_usage()
+        if usage.get("metrics_available"):
+            return {
+                "success": True,
+                "metrics": usage.get("pod_metrics", "")
+            }
+        return {"error": usage.get("error", "Metrics not available"), "success": False}
+    
+    async def get_deployments(self, namespace: str = None) -> Dict[str, Any]:
+        """Get deployments."""
+        args = ["get", "deployments"]
+        if namespace:
+            args.extend(["-n", namespace])
+        else:
+            args.append("--all-namespaces")
+        args.extend(["-o", "json"])
+        
+        result = await self._run_kubectl(args)
+        if result["success"]:
+            try:
+                return json.loads(result["output"])
+            except json.JSONDecodeError:
+                return {"error": "Failed to parse JSON output"}
+        return {"error": result["error"]}
+    
+    async def get_services(self, namespace: str = None) -> Dict[str, Any]:
+        """Get services."""
+        args = ["get", "services"]
+        if namespace:
+            args.extend(["-n", namespace])
+        else:
+            args.append("--all-namespaces")
+        args.extend(["-o", "json"])
+        
+        result = await self._run_kubectl(args)
+        if result["success"]:
+            try:
+                return json.loads(result["output"])
+            except json.JSONDecodeError:
+                return {"error": "Failed to parse JSON output"}
+        return {"error": result["error"]}
+    
+    async def get_network_policies(self) -> Dict[str, Any]:
+        """Get network policies."""
+        result = await self._run_kubectl(["get", "networkpolicies", "--all-namespaces", "-o", "json"])
+        if result["success"]:
+            try:
+                return json.loads(result["output"])
+            except json.JSONDecodeError:
+                return {"error": "Failed to parse JSON output"}
+        return {"error": result["error"]}
+    
+    async def get_ingresses(self) -> Dict[str, Any]:
+        """Get ingresses."""
+        result = await self._run_kubectl(["get", "ingresses", "--all-namespaces", "-o", "json"])
+        if result["success"]:
+            try:
                 return json.loads(result["output"])
             except json.JSONDecodeError:
                 return {"error": "Failed to parse JSON output"}
