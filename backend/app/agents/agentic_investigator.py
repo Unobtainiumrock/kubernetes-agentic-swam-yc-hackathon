@@ -1,13 +1,15 @@
 """
-Agentic Kubernetes Investigation Agent.
+Enhanced Agentic Kubernetes Investigation Agent (Version 2)
 
 This agent uses AI to autonomously decide investigation approach and
-adapt based on findings using Google ADK integration.
+adapt based on findings using Google ADK integration and company-specific
+internal knowledge base for intelligent solution generation.
 """
 import asyncio
 import logging
 import sys
 import os
+import json
 from typing import Dict, List, Optional, Any
 import time
 from datetime import datetime
@@ -21,14 +23,16 @@ from .base_investigator import BaseInvestigator
 from .tools.kubectl_wrapper import KubectlWrapper
 from .tools.k8sgpt_wrapper import K8sgptWrapper
 from .tools.report_generator import ReportGenerator, Severity, InvestigationType
+from .knowledge.knowledge_engine import AcmeCorpKnowledgeEngine
 
 
 class AgenticInvestigator(BaseInvestigator):
     """
-    AI-driven investigation agent that autonomously decides investigation approach.
+    Enhanced AI-driven investigation agent with company knowledge integration.
     
     This agent leverages Google ADK to make intelligent decisions about what
-    to investigate next based on initial findings and available tools.
+    to investigate next based on initial findings and uses AcmeCorp internal
+    knowledge to generate company-compliant solutions.
     """
     
     def __init__(self):
@@ -45,78 +49,74 @@ class AgenticInvestigator(BaseInvestigator):
         self.investigation_history = []
         self.decisions_made = 0
         
-        # Initialize agent
+        # Knowledge engine for company-specific guidance
+        self.knowledge_engine = AcmeCorpKnowledgeEngine()
+        
+        # Investigation state
+        self.current_issues = []
+        self.classified_issues = []
+        self.generated_solutions = []
+        
+        # Initialize agent and tools
         self._initialize_agent()
         self._register_tools()
         
     def _initialize_agent(self):
         """Initialize Google ADK agent."""
         try:
+            # Import Google ADK components
+            from adk_agent.config.loader import load_runtime_config
             from adk_agent.agents.core_agent import create_core_agent
             
             # Load configuration
-            config = {
-                "model": "openai/gpt-4o-mini",
-                "provider": "openrouter"
-            }
+            config_path = os.getenv("ADK_CONFIG_PATH", "/root/google-adk/src/adk_agent/config/runtime.yaml")
+            config = load_runtime_config(config_path)
             
+            # Create core agent
             self.agent = create_core_agent(config)
             self.logger.info("Google ADK agent initialized successfully")
             
         except Exception as e:
-            self.logger.error(f"Failed to initialize Google ADK agent: {e}")
-            # Create a simple fallback agent for demo purposes
-            self.agent = None
+            self.logger.warning(f"Failed to initialize Google ADK agent: {e}")
+            self.agent = None  # Will use fallback investigation
     
     def _register_tools(self):
-        """Register available investigation tools for the AI agent."""
+        """Register investigation tools for AI agent."""
         self.available_tools = {
-            "get_cluster_overview": {
-                "function": self._tool_get_cluster_overview,
-                "description": "Get basic cluster information including nodes, namespaces, and version",
-                "parameters": {}
-            },
-            "analyze_pods": {
-                "function": self._tool_analyze_pods,
-                "description": "Analyze pod status across namespaces",
-                "parameters": {"namespace": "optional namespace filter"}
-            },
-            "analyze_nodes": {
-                "function": self._tool_analyze_nodes,
-                "description": "Analyze node health and status",
-                "parameters": {}
-            },
-            "get_resource_metrics": {
-                "function": self._tool_get_resource_metrics,
-                "description": "Get resource utilization metrics for nodes and pods",
-                "parameters": {}
-            },
-            "analyze_events": {
-                "function": self._tool_analyze_events,
-                "description": "Analyze recent cluster events for issues",
-                "parameters": {"namespace": "optional namespace filter"}
-            },
-            "run_k8sgpt_analysis": {
-                "function": self._tool_run_k8sgpt_analysis,
-                "description": "Run AI-powered issue detection using k8sgpt",
-                "parameters": {}
-            },
-            "analyze_workloads": {
-                "function": self._tool_analyze_workloads,
-                "description": "Analyze deployments and services",
-                "parameters": {"namespace": "optional namespace filter"}
-            },
-            "investigate_specific_resource": {
-                "function": self._tool_investigate_specific_resource,
-                "description": "Deep dive into a specific resource (pod, deployment, etc.)",
-                "parameters": {"resource_type": "type of resource", "resource_name": "name of resource", "namespace": "namespace"}
-            },
-            "check_network_policies": {
-                "function": self._tool_check_network_policies,
-                "description": "Analyze network policies and ingresses",
-                "parameters": {}
-            }
+            "detect_cluster_issues": self._detect_cluster_issues,
+            "classify_issue_with_ai": self._classify_issue_with_ai,
+            "get_company_knowledge": self._get_company_knowledge,
+            "generate_ai_solutions": self._generate_knowledge_based_solutions,
+            "analyze_pod_problems": self._analyze_pod_problems,
+            "analyze_node_health": self._analyze_node_health,
+            "analyze_cluster_events": self._analyze_cluster_events
         }
+        
+        self.logger.info(f"Registered {len(self.available_tools)} investigation tools")
+    
+    async def _investigate(self) -> None:
+        """
+        Main AI-driven investigation with knowledge integration.
+        Implementation of the abstract method from BaseInvestigator.
+        """
+        try:
+            self.logger.info("Starting enhanced AI-driven investigation...")
+            print("🧠 Starting Enhanced AI Investigation with AcmeCorp Knowledge...")
+            
+            # Run comprehensive AI investigation
+            report_data = await self.run_investigation()
+            
+            # Store results for autonomous monitor
+            self.report_data = report_data
+            
+            self.logger.info("Enhanced AI investigation completed successfully")
+            print("✅ Enhanced AI Investigation Complete!")
+            
+        except Exception as e:
+            self.logger.error(f"Enhanced AI investigation failed: {e}")
+            print(f"❌ AI investigation failed, running fallback: {e}")
+            # Fallback to basic investigation
+            await self._run_fallback_investigation()
     
     async def run_investigation(self, 
                               namespace: Optional[str] = None,
@@ -124,647 +124,764 @@ class AgenticInvestigator(BaseInvestigator):
                               include_events: bool = True,
                               timeout: int = 300) -> Dict[str, Any]:
         """
-        Execute AI-driven autonomous investigation.
-        
-        Args:
-            namespace: Specific namespace to focus on
-            include_k8sgpt: Whether to include k8sgpt analysis
-            include_events: Whether to analyze cluster events
-            timeout: Investigation timeout in seconds
-            
-        Returns:
-            Complete investigation report
+        Run enhanced AI-driven investigation with company knowledge.
         """
-        self.logger.info("🤖 Starting Agentic Kubernetes Investigation")
-        print("🤖 Starting Agentic Kubernetes Investigation")
-        print("=" * 60)
+        start_time = time.time()
         
         try:
-            # Set agent metadata
-            self.report_generator.set_agent_metadata({
-                "agent_type": "agentic",
-                "version": "1.0.0",
-                "ai_model": "gpt-4o-mini",
-                "namespace_filter": namespace,
-                "include_k8sgpt": include_k8sgpt,
-                "include_events": include_events,
-                "timeout_seconds": timeout,
-                "available_tools": list(self.available_tools.keys())
-            })
+            print("🚀 Enhanced Agentic Investigation Starting...")
+            print("==================================================")
+            print("🧠 AI Agent: Analyzing cluster with company knowledge")
+            print("📚 Knowledge Base: AcmeCorp internal documentation")
+            print("⚡ Investigation Mode: Adaptive AI-driven analysis")
+            print()
             
-            # Start autonomous investigation
-            if self.agent:
-                investigation_result = await self._run_ai_driven_investigation(
-                    namespace, include_k8sgpt, include_events, timeout
+            # Step 1: Detect and classify issues using AI
+            print("🔍 Step 1: AI-Powered Issue Detection and Classification...")
+            detected_issues = await self._detect_cluster_issues(namespace)
+            
+            if not detected_issues:
+                print("✅ No issues detected - cluster appears healthy")
+                return await self._generate_healthy_cluster_report(start_time)
+            
+            print(f"📊 Detected {len(detected_issues)} potential issues")
+            
+            # Step 2: AI classification and prioritization
+            print("🧠 Step 2: AI Issue Classification and Prioritization...")
+            classified_issues = []
+            
+            for issue in detected_issues:
+                classification = await self._classify_issue_with_ai(issue)
+                classified_issues.append({
+                    "issue": issue,
+                    "classification": classification
+                })
+                
+                print(f"   🏷️  {issue.get('resource', 'Unknown')}: {classification.get('type', 'Unknown')} "
+                      f"(Severity: {classification.get('severity', 'Unknown')})")
+            
+            # Step 3: Generate company-aware solutions
+            print("📚 Step 3: Generating Company-Aware Solutions...")
+            investigation_results = []
+            
+            for classified_issue in classified_issues:
+                issue = classified_issue["issue"]
+                classification = classified_issue["classification"]
+                
+                print(f"   💡 Analyzing: {issue.get('resource', 'Unknown')}")
+                
+                # Get relevant company knowledge
+                knowledge = await self._get_company_knowledge(classification)
+                
+                # Generate AI solutions using company knowledge
+                solutions = await self._generate_knowledge_based_solutions(
+                    classification, issue, knowledge
                 )
-            else:
-                # Fallback to simulated autonomous behavior
-                investigation_result = await self._run_fallback_investigation(
-                    namespace, include_k8sgpt, include_events, timeout
-                )
+                
+                # Record findings
+                await self._record_ai_finding(issue, classification, solutions, knowledge)
+                
+                investigation_results.append({
+                    "issue": issue,
+                    "classification": classification,
+                    "knowledge_used": len(knowledge),
+                    "solutions": solutions
+                })
+                
+                print(f"   ✅ Generated {len(solutions)} company-compliant solutions")
             
-            # Generate final report
-            final_report = self.report_generator.generate_json_report()
+            # Step 4: Generate comprehensive report
+            print("📋 Step 4: Generating AI Investigation Report...")
+            final_report = await self._generate_ai_investigation_report(
+                investigation_results, start_time
+            )
             
-            # Add agentic-specific metadata
-            final_report["agentic_metadata"] = {
-                "decisions_made": self.decisions_made,
-                "tools_used": len(set(entry["tool"] for entry in self.investigation_history)),
-                "investigation_depth": "comprehensive" if len(self.investigation_history) > 5 else "standard",
-                "investigation_history": self.investigation_history
-            }
-            
-            print("✅ Agentic Investigation Complete!")
-            self.logger.info("Agentic investigation completed successfully")
+            print(f"🎯 Investigation Complete: {len(classified_issues)} issues analyzed")
+            print(f"📝 Total solutions generated: {sum(len(r['solutions']) for r in investigation_results)}")
+            print(f"⏱️  Investigation duration: {time.time() - start_time:.1f} seconds")
             
             return final_report
             
         except Exception as e:
-            self.logger.error(f"Agentic investigation failed: {e}")
+            self.logger.error(f"Enhanced AI investigation failed: {e}")
             print(f"❌ Investigation failed: {e}")
             
-            # Generate error report
-            self.report_generator.add_finding(
-                category="investigation_error",
-                severity=Severity.CRITICAL,
-                title="Agentic Investigation Failed",
-                description=f"AI-driven investigation failed with error: {str(e)}",
-                affected_resources=["agentic_investigator"],
-                recommendations=["Review investigation logs", "Check AI agent configuration", "Verify tool availability"],
-                evidence=[str(e)],
-                source_tool="agentic_investigator"
-            )
-            
-            final_report = self.report_generator.generate_json_report()
-            final_report["agentic_metadata"] = {
-                "decisions_made": self.decisions_made,
-                "tools_used": 0,
-                "investigation_depth": "failed",
-                "investigation_history": self.investigation_history
-            }
-            
-            return final_report
+            # Fallback to basic investigation
+            return await self._run_fallback_investigation(namespace, include_k8sgpt, include_events, timeout)
     
-    async def _run_ai_driven_investigation(self, namespace, include_k8sgpt, include_events, timeout):
-        """Run actual AI-driven investigation using Google ADK."""
-        print("🧠 AI Agent taking control of investigation...")
-        
-        # Initial prompt to the AI agent
-        initial_prompt = f"""
-You are an expert Kubernetes Site Reliability Engineer with autonomous investigation capabilities.
-
-Your mission: Investigate the current Kubernetes cluster state and identify any issues or areas for improvement.
-
-Available Tools:
-{self._format_tools_for_prompt()}
-
-Investigation Parameters:
-- Namespace filter: {namespace or "All namespaces"}
-- Include k8sgpt analysis: {include_k8sgpt}
-- Include event analysis: {include_events}
-- Timeout: {timeout} seconds
-
-Your approach should be:
-1. Start with a high-level cluster overview
-2. Based on initial findings, decide what to investigate next
-3. Follow up on any issues you discover
-4. Use AI-powered tools when appropriate
-5. Provide comprehensive analysis and recommendations
-
-Please start your investigation now. Decide which tool to use first and explain your reasoning.
-"""
+    async def _detect_cluster_issues(self, namespace: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Detect cluster issues using kubectl analysis."""
+        issues = []
         
         try:
-            # Get initial investigation plan from AI
+            # Get pod issues
+            pods_result = await self.kubectl.get_all_pods(namespace)
+            if pods_result and "items" in pods_result:
+                pod_issues = await self._analyze_pod_problems(pods_result["items"])
+                issues.extend(pod_issues)
+            
+            # Get node issues
+            nodes_result = await self.kubectl.get_nodes()
+            if nodes_result and "items" in nodes_result:
+                node_issues = await self._analyze_node_health(nodes_result["items"])
+                issues.extend(node_issues)
+            
+            # Get event issues
+            if namespace:
+                events_result = await self.kubectl.get_events(namespace)
+            else:
+                events_result = await self.kubectl.get_events()
+            
+            if events_result and "items" in events_result:
+                event_issues = await self._analyze_cluster_events(events_result["items"])
+                issues.extend(event_issues)
+            
+        except Exception as e:
+            self.logger.error(f"Failed to detect cluster issues: {e}")
+        
+        return issues
+    
+    async def _classify_issue_with_ai(self, issue_details: Dict[str, Any]) -> Dict[str, Any]:
+        """Use AI to classify and understand the issue type."""
+        
+        # If Google ADK is available, use it for classification
+        if self.agent:
+            try:
+                return await self._ai_classify_with_adk(issue_details)
+            except Exception as e:
+                self.logger.warning(f"ADK classification failed: {e}")
+        
+        # Fallback: rule-based classification
+        return self._rule_based_classification(issue_details)
+    
+    async def _ai_classify_with_adk(self, issue_details: Dict[str, Any]) -> Dict[str, Any]:
+        """Use Google ADK for intelligent issue classification with visible reasoning."""
+        
+        classification_prompt = f"""
+        You are AcmeCorp's Senior SRE analyzing a Kubernetes issue. Think step by step and show your reasoning process.
+
+        ISSUE DETAILS:
+        - Resource: {issue_details.get('resource', 'unknown')}
+        - Status: {issue_details.get('status', 'unknown')}
+        - Message: {issue_details.get('message', 'No message')}
+        - Type: {issue_details.get('type', 'unknown')}
+        - Namespace: {issue_details.get('namespace', 'unknown')}
+        
+        THINK THROUGH THIS SYSTEMATICALLY:
+        
+        OBSERVATION: What technical symptoms do you observe?
+        ANALYSIS: What is the likely root cause based on these symptoms?
+        COMPANY_IMPACT: How does this affect AcmeCorp operations?
+        URGENCY: How quickly does this need resolution?
+        CLASSIFICATION: What category and severity is this?
+        
+        After your analysis, provide final classification as JSON:
+        {{
+            "type": "descriptive_issue_type",
+            "severity": "low|medium|high|critical", 
+            "components": ["affected", "components"],
+            "root_cause_category": "image|resource|network|config|security",
+            "investigation_priority": 1-10,
+            "immediate_action_needed": true/false,
+            "company_impact": "minimal|moderate|significant|severe"
+        }}
+        """
+        
+        try:
+            print("   🧠 AI Agent analyzing issue...")
+            
             response = self.agent.run(
-                "You are an expert Kubernetes SRE conducting an autonomous cluster investigation.",
-                initial_prompt
+                "You are AcmeCorp's Senior SRE with deep Kubernetes expertise.",
+                classification_prompt
             )
             
-            print(f"🎯 AI Agent Decision: {response[:200]}...")
-            self._record_decision("initial_planning", response)
+            # Display AI reasoning process
+            print("   💭 AI Reasoning Process:")
+            self._display_ai_thinking(response)
             
-            # Execute AI-guided investigation
-            await self._execute_ai_investigation_loop(namespace, include_k8sgpt, include_events)
+            # Extract JSON from response
+            classification = self._extract_json_from_reasoning(response)
+            self._record_ai_decision("issue_classification", response)
+            
+            return classification
             
         except Exception as e:
-            self.logger.error(f"AI-driven investigation failed: {e}")
-            print(f"❌ AI investigation failed, falling back: {e}")
-            await self._run_fallback_investigation(namespace, include_k8sgpt, include_events, timeout)
+            self.logger.error(f"ADK classification parsing failed: {e}")
+            print(f"   ⚠️  AI classification failed, using rule-based fallback: {e}")
+            return self._rule_based_classification(issue_details)
     
-    async def _execute_ai_investigation_loop(self, namespace, include_k8sgpt, include_events):
-        """Execute investigation loop guided by AI decisions."""
-        investigation_steps = 0
-        max_steps = 8  # Prevent infinite loops
+    def _rule_based_classification(self, issue_details: Dict[str, Any]) -> Dict[str, Any]:
+        """Fallback rule-based issue classification."""
         
-        # Start with cluster overview (always a good first step)
-        print("🔍 Starting with cluster overview...")
-        overview_result = await self._tool_get_cluster_overview()
-        self._record_investigation("get_cluster_overview", overview_result)
+        issue_type = issue_details.get("type", "").lower()
+        status = issue_details.get("status", "").lower()
+        message = issue_details.get("message", "").lower()
         
-        # Analyze pods (fundamental for cluster health)
-        print("🔍 Analyzing pod status...")
-        pod_result = await self._tool_analyze_pods(namespace)
-        self._record_investigation("analyze_pods", pod_result)
+        # Classification rules
+        if "imagepullbackoff" in issue_type or "errimagepull" in issue_type:
+            return {
+                "type": "ImagePullBackOff",
+                "severity": "high",
+                "components": ["image", "registry", "deployment"],
+                "root_cause_category": "image", 
+                "investigation_priority": 8,
+                "immediate_action_needed": True,
+                "company_impact": "significant"
+            }
         
-        # Check if we found issues that need deeper investigation
-        findings_so_far = len(self.report_generator.findings)
+        elif "crashloopbackoff" in issue_type:
+            return {
+                "type": "CrashLoopBackOff",
+                "severity": "critical",
+                "components": ["application", "resource", "config"],
+                "root_cause_category": "resource",
+                "investigation_priority": 9,
+                "immediate_action_needed": True,
+                "company_impact": "severe"
+            }
         
-        if findings_so_far > 0:
-            print(f"🔍 Found {findings_so_far} issues, investigating further...")
-            
-            # Analyze events if issues found
-            if include_events:
-                events_result = await self._tool_analyze_events(namespace)
-                self._record_investigation("analyze_events", events_result)
-            
-            # Run k8sgpt for AI insights
-            if include_k8sgpt:
-                k8sgpt_result = await self._tool_run_k8sgpt_analysis()
-                self._record_investigation("run_k8sgpt_analysis", k8sgpt_result)
+        elif "pending" in status:
+            return {
+                "type": "PodPending",
+                "severity": "medium",
+                "components": ["scheduling", "resource", "node"],
+                "root_cause_category": "resource",
+                "investigation_priority": 6,
+                "immediate_action_needed": False,
+                "company_impact": "moderate"
+            }
         
-        # Always check resource utilization
-        print("🔍 Checking resource utilization...")
-        metrics_result = await self._tool_get_resource_metrics()
-        self._record_investigation("get_resource_metrics", metrics_result)
-        
-        # Analyze workloads
-        print("🔍 Analyzing workloads...")
-        workload_result = await self._tool_analyze_workloads(namespace)
-        self._record_investigation("analyze_workloads", workload_result)
-        
-        # Generate AI summary of findings
-        await self._generate_ai_analysis_summary()
+        else:
+            return {
+                "type": "UnknownIssue",
+                "severity": "medium",
+                "components": ["general"],
+                "root_cause_category": "config",
+                "investigation_priority": 5,
+                "immediate_action_needed": False,
+                "company_impact": "minimal"
+            }
     
-    async def _run_fallback_investigation(self, namespace, include_k8sgpt, include_events, timeout):
-        """Fallback investigation when AI agent is not available."""
-        print("🔄 Running fallback autonomous investigation...")
-        
-        # Simulate autonomous decision-making
-        investigation_plan = [
-            ("cluster_overview", "Start with cluster overview to understand basic state"),
-            ("pod_analysis", "Check pod health as it's fundamental to cluster operation"),
-            ("node_analysis", "Verify node status and resource availability"),
-            ("resource_metrics", "Check resource utilization patterns"),
-        ]
-        
-        if include_events:
-            investigation_plan.append(("event_analysis", "Analyze events for issues and warnings"))
-        
-        if include_k8sgpt:
-            investigation_plan.append(("k8sgpt_analysis", "Use AI-powered issue detection"))
-        
-        investigation_plan.extend([
-            ("workload_analysis", "Check deployments and services"),
-            ("network_analysis", "Review network policies and connectivity")
-        ])
-        
-        # Execute planned investigation
-        for tool_name, reasoning in investigation_plan:
-            print(f"🤖 AI Decision: {reasoning}")
-            self._record_decision(tool_name, reasoning)
-            
-            # Execute the appropriate tool
-            if tool_name == "cluster_overview":
-                result = await self._tool_get_cluster_overview()
-            elif tool_name == "pod_analysis":
-                result = await self._tool_analyze_pods(namespace)
-            elif tool_name == "node_analysis":
-                result = await self._tool_analyze_nodes()
-            elif tool_name == "resource_metrics":
-                result = await self._tool_get_resource_metrics()
-            elif tool_name == "event_analysis":
-                result = await self._tool_analyze_events(namespace)
-            elif tool_name == "k8sgpt_analysis":
-                result = await self._tool_run_k8sgpt_analysis()
-            elif tool_name == "workload_analysis":
-                result = await self._tool_analyze_workloads(namespace)
-            elif tool_name == "network_analysis":
-                result = await self._tool_check_network_policies()
-            else:
-                result = {"status": "skipped", "message": f"Unknown tool: {tool_name}"}
-            
-            self._record_investigation(tool_name, result)
-            
-            # Simulate AI adaptation based on findings
-            findings_count = len(self.report_generator.findings)
-            if findings_count > 0 and tool_name in ["pod_analysis", "event_analysis"]:
-                print(f"🤖 AI Adaptation: Found {findings_count} issues, will prioritize deeper analysis")
+    async def _get_company_knowledge(self, classification: Dict[str, Any]) -> str:
+        """Retrieve relevant AcmeCorp knowledge for the classified issue."""
+        try:
+            knowledge = await self.knowledge_engine.get_relevant_knowledge(classification)
+            self.logger.debug(f"Retrieved {len(knowledge)} characters of company knowledge")
+            return knowledge
+        except Exception as e:
+            self.logger.error(f"Failed to retrieve company knowledge: {e}")
+            return "AcmeCorp knowledge base unavailable."
     
-    async def _generate_ai_analysis_summary(self):
-        """Generate AI-powered summary of investigation findings."""
-        if not self.agent:
-            return
+    async def _generate_knowledge_based_solutions(self, classification: Dict, issue_details: Dict, knowledge: str) -> List[str]:
+        """Generate solutions by reasoning through company knowledge."""
+        
+        if self.agent and knowledge:
+            try:
+                return await self._ai_generate_solutions(classification, issue_details, knowledge)
+            except Exception as e:
+                self.logger.warning(f"AI solution generation failed: {e}")
+        
+        # Fallback: rule-based solutions
+        return self._rule_based_solutions(classification, issue_details)
+    
+    async def _ai_generate_solutions(self, classification: Dict, issue_details: Dict, knowledge: str) -> List[str]:
+        """Use AI to generate detailed, actionable solutions with visible reasoning."""
+        
+        # Extract specific context for better solutions
+        resource_name = issue_details.get('resource', 'unknown').split('/')[-1]
+        namespace = issue_details.get('namespace', 'default')
+        error_message = issue_details.get('message', '')
+        issue_type = classification.get('type', '')
+        
+        solution_prompt = f"""
+        You are AcmeCorp's Senior SRE providing detailed resolution instructions. Think through this systematically and show your reasoning.
+
+        ACMECORP INTERNAL KNOWLEDGE BASE:
+        {knowledge}
+        
+        SPECIFIC PRODUCTION ISSUE:
+        - Deployment: {resource_name}
+        - Namespace: {namespace}  
+        - Issue Type: {issue_type}
+        - Error Message: {error_message}
+        - Severity: {classification.get('severity', 'unknown')}
+        
+        THINK THROUGH THE RESOLUTION SYSTEMATICALLY:
+        
+        ROOT_CAUSE_ANALYSIS: What is the exact technical cause of this issue?
+        COMPANY_POLICY_CHECK: Which AcmeCorp standards/policies are violated?
+        IMMEDIATE_IMPACT: What is the business impact right now?
+        SOLUTION_BRAINSTORM: What are the possible technical fixes?
+        BEST_APPROACH: What is the recommended resolution strategy?
+        SPECIFIC_STEPS: What are the exact commands and code changes needed?
+        VERIFICATION: How do we confirm the fix worked?
+        PREVENTION: How do we prevent this from happening again?
+        
+        After your analysis, provide detailed resolution steps in this format:
+
+        RESOLUTION PLAN:
+        ===============
+        
+        ROOT CAUSE: [Specific technical reason]
+        COMPANY VIOLATION: [Which policy/standard violated]
+        BUSINESS IMPACT: [Service/user impact]
+        
+        RESOLUTION STEPS:
+        ================
+        1️⃣ IMMEDIATE FIX:
+           [Exact kubectl/bash commands with real values]
+           
+        2️⃣ VERIFICATION:
+           [Commands to verify fix worked]
+           
+        3️⃣ PERMANENT SOLUTION:
+           [YAML/config changes needed with specific code]
+           
+        4️⃣ PREVENTION:
+           [Process/automation changes to prevent recurrence]
+        
+        TIMELINE: [Expected time to resolution]
+        RISK: [Deployment risk level and mitigation]
+        REFERENCE: [Specific AcmeCorp policy section]
+        
+        Use ONLY AcmeCorp-approved resources from the knowledge base.
+        Be specific with namespaces, image tags, resource limits, exact commands.
+        """
         
         try:
-            # Prepare findings for AI analysis
-            findings_summary = []
-            for finding in self.report_generator.findings:
-                findings_summary.append({
-                    "category": finding.category,
-                    "severity": finding.severity.value,
-                    "title": finding.title,
-                    "description": finding.description
+            print("   🧠 AI Agent generating resolution plan...")
+            
+            response = self.agent.run(
+                "You are AcmeCorp's Senior SRE providing actionable resolution guidance.",
+                solution_prompt
+            )
+            
+            # Display AI reasoning process
+            print("   💭 AI Resolution Reasoning:")
+            self._display_ai_thinking(response)
+            
+            # Format the detailed resolution
+            formatted_solution = self._format_detailed_resolution(response, resource_name, namespace)
+            self._record_ai_decision("solution_generation", response)
+            
+            return [formatted_solution]
+            
+        except Exception as e:
+            self.logger.error(f"AI solution generation failed: {e}")
+            print(f"   ⚠️  AI solution generation failed, using rule-based fallback: {e}")
+            return self._rule_based_solutions(classification, issue_details)
+    
+    def _rule_based_solutions(self, classification: Dict, issue_details: Dict) -> List[str]:
+        """Fallback rule-based solutions."""
+        
+        issue_type = classification.get("type", "").lower()
+        resource = issue_details.get("resource", "unknown")
+        
+        if "imagepullbackoff" in issue_type:
+            return [
+                f"**Issue**: Image pull failure for {resource}\n"
+                f"**Solution**: Update to AcmeCorp approved image\n"
+                f"**Command**: `kubectl set image deployment/{resource.split('/')[-1]} container=harbor.acmecorp.com/frontend/nginx:1.27.1`\n"
+                f"**Reference**: AcmeCorp Standards - Container Image Policy\n"
+                f"**Priority**: high",
+                
+                f"**Issue**: Unapproved image source\n"
+                f"**Solution**: Use company registry images only\n"
+                f"**Command**: Check approved images in harbor.acmecorp.com\n"
+                f"**Reference**: Approved Resources Registry\n"
+                f"**Priority**: high"
+            ]
+        
+        elif "crashloopbackoff" in issue_type:
+            return [
+                f"**Issue**: Pod crashing due to resource constraints\n"
+                f"**Solution**: Adjust resources per AcmeCorp standards\n"
+                f"**Command**: `kubectl patch deployment {resource.split('/')[-1]} -p '{{\"spec\":{{\"template\":{{\"spec\":{{\"containers\":[{{\"name\":\"app\",\"resources\":{{\"requests\":{{\"memory\":\"64Mi\",\"cpu\":\"100m\"}},\"limits\":{{\"memory\":\"128Mi\",\"cpu\":\"200m\"}}}}}}]}}}}}}}}'`\n"
+                f"**Reference**: AcmeCorp Resource Allocation Standards\n"
+                f"**Priority**: critical"
+            ]
+        
+        else:
+            return [
+                f"**Issue**: General Kubernetes issue with {resource}\n"
+                f"**Solution**: Follow AcmeCorp troubleshooting procedures\n"
+                f"**Command**: `kubectl describe pod {resource.split('/')[-1]}`\n"
+                f"**Reference**: AcmeCorp Incident Playbook\n"
+                f"**Priority**: medium"
+            ]
+    
+    async def _analyze_pod_problems(self, pods: List[Dict]) -> List[Dict[str, Any]]:
+        """Analyze pod issues from kubectl output."""
+        issues = []
+        
+        for pod in pods:
+            pod_name = pod.get("metadata", {}).get("name", "unknown")
+            namespace = pod.get("metadata", {}).get("namespace", "unknown")
+            status = pod.get("status", {})
+            phase = status.get("phase", "Unknown")
+            
+            # Check container statuses for issues
+            container_statuses = status.get("containerStatuses", [])
+            for container in container_statuses:
+                state = container.get("state", {})
+                
+                if "waiting" in state:
+                    waiting_reason = state["waiting"].get("reason", "")
+                    waiting_message = state["waiting"].get("message", "")
+                    
+                    if waiting_reason in ["ImagePullBackOff", "ErrImagePull", "CrashLoopBackOff"]:
+                        issues.append({
+                            "resource": f"{namespace}/{pod_name}",
+                            "type": waiting_reason,
+                            "status": phase,
+                            "message": waiting_message,
+                            "namespace": namespace,
+                            "container": container.get("name", "unknown")
+                        })
+        
+        return issues
+    
+    async def _analyze_node_health(self, nodes: List[Dict]) -> List[Dict[str, Any]]:
+        """Analyze node health issues."""
+        issues = []
+        
+        for node in nodes:
+            node_name = node.get("metadata", {}).get("name", "unknown")
+            conditions = node.get("status", {}).get("conditions", [])
+            
+            for condition in conditions:
+                condition_type = condition.get("type", "")
+                status = condition.get("status", "")
+                reason = condition.get("reason", "")
+                message = condition.get("message", "")
+                
+                # Check for problematic conditions
+                if condition_type == "Ready" and status != "True":
+                    issues.append({
+                        "resource": f"node/{node_name}",
+                        "type": "NodeNotReady",
+                        "status": "NotReady",
+                        "message": message,
+                        "namespace": "kube-system",
+                        "reason": reason
+                    })
+        
+        return issues
+    
+    async def _analyze_cluster_events(self, events: List[Dict]) -> List[Dict[str, Any]]:
+        """Analyze cluster events for issues."""
+        issues = []
+        
+        for event in events[-20:]:  # Last 20 events
+            event_type = event.get("type", "")
+            reason = event.get("reason", "")
+            message = event.get("message", "")
+            involved_object = event.get("involvedObject", {})
+            
+            if event_type == "Warning" and reason in ["Failed", "FailedScheduling", "Unhealthy"]:
+                resource_name = involved_object.get("name", "unknown")
+                namespace = involved_object.get("namespace", "unknown")
+                
+                issues.append({
+                    "resource": f"{namespace}/{resource_name}",
+                    "type": f"Event{reason}",
+                    "status": "Warning",
+                    "message": message,
+                    "namespace": namespace,
+                    "event_reason": reason
                 })
-            
-            analysis_prompt = f"""
-Based on the Kubernetes cluster investigation I just completed, please provide:
-
-1. Overall cluster health assessment (HEALTHY/CONCERNING/CRITICAL)
-2. Top 3 most important issues to address immediately
-3. Root cause analysis for any critical issues
-4. Strategic recommendations for cluster improvement
-
-Investigation Findings:
-{findings_summary}
-
-Investigation Tools Used:
-{[entry['tool'] for entry in self.investigation_history]}
-
-Please provide a concise but comprehensive analysis.
-"""
-            
-            ai_summary = self.agent.run(
-                "Provide expert analysis of the Kubernetes cluster investigation results.",
-                analysis_prompt
-            )
-            
-            print(f"🧠 AI Analysis Summary:")
-            print(ai_summary[:300] + "...")
-            
-            # Add AI analysis as a finding
-            self.report_generator.add_finding(
-                category="ai_analysis",
-                severity=Severity.INFO,
-                title="AI-Powered Cluster Analysis",
-                description=ai_summary,
-                affected_resources=["cluster"],
-                recommendations=["Review AI analysis", "Follow strategic recommendations"],
-                evidence=["AI analysis of investigation findings"],
-                source_tool="agentic_ai"
-            )
-            
-        except Exception as e:
-            self.logger.error(f"AI analysis summary failed: {e}")
+        
+        return issues
     
-    def _record_decision(self, tool_name: str, reasoning: str):
-        """Record an AI decision for transparency."""
-        self.decisions_made += 1
-        decision_record = {
-            "decision_number": self.decisions_made,
-            "timestamp": datetime.now().isoformat(),
-            "tool_selected": tool_name,
-            "reasoning": reasoning
+    async def _record_ai_finding(self, issue: Dict, classification: Dict, solutions: List[str], knowledge: str):
+        """Record AI investigation finding with solutions."""
+        
+        # Determine severity enum
+        severity_map = {
+            "low": Severity.LOW,
+            "medium": Severity.MEDIUM,
+            "high": Severity.HIGH,
+            "critical": Severity.CRITICAL
         }
-        print(f"   🎯 Decision #{self.decisions_made}: {tool_name}")
+        
+        severity = severity_map.get(classification.get("severity", "medium"), Severity.MEDIUM)
+        
+        # Create finding
+        self.report_generator.add_finding(
+            category=classification.get("root_cause_category", "unknown"),
+            severity=severity,
+            title=f"{classification.get('type', 'Unknown Issue')} in {issue.get('resource', 'unknown')}",
+            description=issue.get("message", "No description available"),
+            affected_resources=[issue.get("resource", "unknown")],
+            recommendations=[sol.split("**Solution**:")[-1].split("**Command**:")[0].strip() for sol in solutions[:3]],
+            evidence=[f"Classification: {classification}", f"Knowledge used: {len(knowledge)} chars"],
+            source_tool="ai_agent_with_acmecorp_knowledge"
+        )
     
-    def _record_investigation(self, tool_name: str, result: Dict[str, Any]):
-        """Record investigation step and result."""
+    def _display_ai_thinking(self, ai_response: str):
+        """Display AI thinking process in a readable format."""
+        # Split response into sections for better readability
+        lines = ai_response.split('\n')
+        
+        thinking_sections = []
+        current_section = ""
+        
+        for line in lines:
+            line = line.strip()
+            if any(keyword in line.upper() for keyword in ['OBSERVATION:', 'ANALYSIS:', 'COMPANY_', 'ROOT_CAUSE', 'SOLUTION_', 'IMMEDIATE_', 'VERIFICATION:', 'PREVENTION:']):
+                if current_section:
+                    thinking_sections.append(current_section)
+                current_section = line
+            elif line and not line.startswith('{') and not line.startswith('['):
+                current_section += f" {line}"
+        
+        if current_section:
+            thinking_sections.append(current_section)
+        
+        # Display formatted thinking
+        for section in thinking_sections[:6]:  # Limit to first 6 sections
+            if len(section) > 10:  # Skip very short sections
+                print(f"      {section[:150]}{'...' if len(section) > 150 else ''}")
+    
+    def _extract_json_from_reasoning(self, response: str) -> Dict[str, Any]:
+        """Extract JSON classification from AI reasoning response."""
+        try:
+            # Look for JSON in the response
+            lines = response.split('\n')
+            json_started = False
+            json_lines = []
+            
+            for line in lines:
+                if '{' in line and not json_started:
+                    json_started = True
+                    json_lines.append(line[line.index('{'):])
+                elif json_started:
+                    json_lines.append(line)
+                    if '}' in line:
+                        break
+            
+            json_str = '\n'.join(json_lines)
+            return json.loads(json_str)
+            
+        except Exception as e:
+            # Fallback: extract key information manually
+            return {
+                "type": "ParsedFromReasoning",
+                "severity": "medium",
+                "components": ["kubernetes"],
+                "root_cause_category": "unknown",
+                "investigation_priority": 5,
+                "immediate_action_needed": True,
+                "company_impact": "moderate"
+            }
+    
+    def _format_detailed_resolution(self, ai_response: str, resource_name: str, namespace: str) -> str:
+        """Format AI resolution into structured, actionable steps."""
+        
+        # Extract resolution sections from AI response
+        resolution_sections = self._parse_resolution_sections(ai_response)
+        
+        formatted_resolution = f"""
+{'='*80}
+🚨 DETAILED RESOLUTION PLAN: {resource_name}
+{'='*80}
+
+{resolution_sections.get('root_cause', 'Root cause analysis from AI reasoning')}
+
+BUSINESS IMPACT: {resolution_sections.get('impact', 'Service disruption analysis')}
+COMPANY VIOLATION: {resolution_sections.get('violation', 'Policy compliance check')}
+
+RESOLUTION STEPS:
+================
+{resolution_sections.get('steps', self._generate_fallback_steps(resource_name, namespace))}
+
+⏱️  TIMELINE: {resolution_sections.get('timeline', '15-30 minutes')}
+⚠️  RISK LEVEL: {resolution_sections.get('risk', 'Medium - Standard deployment change')}
+📖 REFERENCE: {resolution_sections.get('reference', 'AcmeCorp Standards Documentation')}
+
+{'='*80}
+        """
+        
+        return formatted_resolution.strip()
+    
+    def _parse_resolution_sections(self, response: str) -> Dict[str, str]:
+        """Parse AI response into structured resolution sections."""
+        sections = {}
+        current_section = None
+        current_content = []
+        
+        lines = response.split('\n')
+        
+        for line in lines:
+            line = line.strip()
+            
+            if 'ROOT CAUSE:' in line.upper():
+                current_section = 'root_cause'
+                current_content = [line]
+            elif 'BUSINESS IMPACT:' in line.upper() or 'IMPACT:' in line.upper():
+                if current_section and current_content:
+                    sections[current_section] = '\n'.join(current_content)
+                current_section = 'impact'
+                current_content = [line]
+            elif 'COMPANY VIOLATION:' in line.upper() or 'VIOLATION:' in line.upper():
+                if current_section and current_content:
+                    sections[current_section] = '\n'.join(current_content)
+                current_section = 'violation'
+                current_content = [line]
+            elif 'RESOLUTION STEPS:' in line.upper() or '1️⃣' in line:
+                if current_section and current_content:
+                    sections[current_section] = '\n'.join(current_content)
+                current_section = 'steps'
+                current_content = [line]
+            elif 'TIMELINE:' in line.upper():
+                if current_section and current_content:
+                    sections[current_section] = '\n'.join(current_content)
+                current_section = 'timeline'
+                current_content = [line]
+            elif 'RISK:' in line.upper():
+                if current_section and current_content:
+                    sections[current_section] = '\n'.join(current_content)
+                current_section = 'risk'
+                current_content = [line]
+            elif 'REFERENCE:' in line.upper():
+                if current_section and current_content:
+                    sections[current_section] = '\n'.join(current_content)
+                current_section = 'reference'
+                current_content = [line]
+            elif current_section and line:
+                current_content.append(line)
+        
+        # Save final section
+        if current_section and current_content:
+            sections[current_section] = '\n'.join(current_content)
+        
+        return sections
+    
+    def _generate_fallback_steps(self, resource_name: str, namespace: str) -> str:
+        """Generate fallback resolution steps when AI parsing fails."""
+        return f"""
+1️⃣ IMMEDIATE FIX:
+   kubectl describe pod -l app={resource_name} -n {namespace}
+   kubectl get events -n {namespace} --sort-by='.lastTimestamp'
+   
+2️⃣ VERIFICATION:
+   kubectl get pods -n {namespace} -l app={resource_name} -o wide
+   kubectl logs -n {namespace} -l app={resource_name} --tail=50
+   
+3️⃣ APPLY COMPANY STANDARDS:
+   # Update deployment to use AcmeCorp approved resources
+   kubectl patch deployment {resource_name} -n {namespace} -p '...'
+   
+4️⃣ MONITOR RECOVERY:
+   watch kubectl get pods -n {namespace} -l app={resource_name}
+        """
+    
+    def _record_ai_decision(self, decision_type: str, details: str):
+        """Record AI decision for investigation history."""
         self.investigation_history.append({
-            "tool": tool_name,
             "timestamp": datetime.now().isoformat(),
-            "success": result.get("success", False),
-            "summary": result.get("summary", "No summary available")
+            "decision_type": decision_type,
+            "details": details[:500],  # Limit size
+            "decision_number": self.decisions_made
         })
+        self.decisions_made += 1
     
-    def _format_tools_for_prompt(self) -> str:
-        """Format available tools for AI prompt."""
-        tool_descriptions = []
-        for tool_name, tool_info in self.available_tools.items():
-            tool_descriptions.append(f"- {tool_name}: {tool_info['description']}")
-        return "\n".join(tool_descriptions)
+    async def _generate_ai_investigation_report(self, investigation_results: List[Dict], start_time: float) -> Dict[str, Any]:
+        """Generate comprehensive AI investigation report."""
+        
+        total_issues = len(investigation_results)
+        total_solutions = sum(len(result["solutions"]) for result in investigation_results)
+        duration = time.time() - start_time
+        
+        # Generate final report
+        report = self.report_generator.generate_json_report()
+        
+        # Add AI-specific metadata
+        report["ai_investigation"] = {
+            "agent_type": "Enhanced Agentic with AcmeCorp Knowledge",
+            "total_issues_analyzed": total_issues,
+            "total_solutions_generated": total_solutions,
+            "ai_decisions_made": self.decisions_made,
+            "knowledge_base_used": "AcmeCorp Internal Documentation",
+            "investigation_mode": "adaptive_ai_driven",
+            "duration_seconds": duration
+        }
+        
+        return report
     
-    # Tool implementations (these call the actual investigation methods)
-    
-    async def _tool_get_cluster_overview(self) -> Dict[str, Any]:
-        """Tool: Get cluster overview."""
-        try:
-            cluster_info = await self.kubectl.get_cluster_info()
-            namespaces = await self.kubectl.get_namespaces()
-            version = await self.kubectl.get_version()
-            
-            if namespaces["success"]:
-                ns_count = len(namespaces.get("parsed_output", {}).get("items", []))
-            else:
-                ns_count = 0
-            
-            return {
-                "success": True,
-                "summary": f"Cluster overview collected: {ns_count} namespaces",
-                "details": {
-                    "namespaces": ns_count,
-                    "cluster_info": cluster_info.get("success", False),
-                    "version_info": version.get("success", False)
-                }
+    async def _generate_healthy_cluster_report(self, start_time: float) -> Dict[str, Any]:
+        """Generate report for healthy cluster."""
+        
+        duration = time.time() - start_time
+        
+        return {
+            "investigation_id": f"agentic_v2_{int(start_time)}",
+            "timestamp": datetime.now().isoformat(),
+            "investigation_type": "agentic_v2",
+            "duration_seconds": duration,
+            "cluster_status": "healthy",
+            "findings": [],
+            "ai_investigation": {
+                "agent_type": "Enhanced Agentic with AcmeCorp Knowledge",
+                "total_issues_analyzed": 0,
+                "total_solutions_generated": 0,
+                "ai_decisions_made": 1,
+                "knowledge_base_used": "AcmeCorp Internal Documentation",
+                "investigation_mode": "adaptive_ai_driven",
+                "cluster_assessment": "No issues detected - cluster operating within AcmeCorp standards"
             }
-        except Exception as e:
-            return {"success": False, "error": str(e), "summary": "Failed to get cluster overview"}
+        }
     
-    async def _tool_analyze_pods(self, namespace: Optional[str] = None) -> Dict[str, Any]:
-        """Tool: Analyze pods."""
-        try:
-            pods = await self.kubectl.get_pods(namespace=namespace)
+    async def _run_fallback_investigation(self, namespace=None, include_k8sgpt=True, include_events=True, timeout=300):
+        """Fallback investigation when AI fails."""
+        
+        print("🔄 Running fallback investigation...")
+        
+        # Basic issue detection
+        issues = await self._detect_cluster_issues(namespace)
+        
+        # Simple classification and solutions
+        investigation_results = []
+        for issue in issues:
+            classification = self._rule_based_classification(issue)
+            solutions = self._rule_based_solutions(classification, issue)
             
-            if not pods["success"]:
-                return {"success": False, "error": pods.get("error"), "summary": "Failed to get pods"}
-            
-            pod_items = pods.get("parsed_output", {}).get("items", [])
-            total_pods = len(pod_items)
-            
-            failed_count = 0
-            pending_count = 0
-            
-            for pod in pod_items:
-                phase = pod.get("status", {}).get("phase", "").lower()
-                if phase == "failed":
-                    failed_count += 1
-                    # Add finding for failed pod
-                    pod_name = pod.get("metadata", {}).get("name", "unknown")
-                    pod_ns = pod.get("metadata", {}).get("namespace", "unknown")
-                    
-                    self.report_generator.add_finding(
-                        category="pod_failures",
-                        severity=Severity.HIGH,
-                        title=f"Failed pod: {pod_name}",
-                        description=f"Pod {pod_name} in namespace {pod_ns} is in Failed state",
-                        affected_resources=[f"{pod_ns}/{pod_name}"],
-                        recommendations=["Check pod logs", "Review pod events", "Verify image availability"],
-                        evidence=[f"Pod phase: Failed"],
-                        source_tool="agentic_kubectl"
-                    )
-                elif phase == "pending":
-                    pending_count += 1
-            
-            return {
-                "success": True,
-                "summary": f"Analyzed {total_pods} pods: {failed_count} failed, {pending_count} pending",
-                "details": {
-                    "total": total_pods,
-                    "failed": failed_count,
-                    "pending": pending_count
-                }
+            investigation_results.append({
+                "issue": issue,
+                "classification": classification,
+                "solutions": solutions
+            })
+        
+        # Generate basic report
+        return {
+            "investigation_id": f"fallback_{int(time.time())}",
+            "timestamp": datetime.now().isoformat(),
+            "investigation_type": "fallback",
+            "findings": investigation_results,
+            "ai_investigation": {
+                "agent_type": "Fallback (AI unavailable)",
+                "total_issues_analyzed": len(issues),
+                "note": "AI agent unavailable, used rule-based analysis"
             }
-        except Exception as e:
-            return {"success": False, "error": str(e), "summary": "Failed to analyze pods"}
-    
-    async def _tool_analyze_nodes(self) -> Dict[str, Any]:
-        """Tool: Analyze nodes."""
-        try:
-            nodes = await self.kubectl.get_nodes()
-            
-            if not nodes["success"]:
-                return {"success": False, "error": nodes.get("error"), "summary": "Failed to get nodes"}
-            
-            node_items = nodes.get("parsed_output", {}).get("items", [])
-            total_nodes = len(node_items)
-            not_ready_count = 0
-            
-            for node in node_items:
-                conditions = node.get("status", {}).get("conditions", [])
-                is_ready = any(
-                    condition.get("type") == "Ready" and condition.get("status") == "True"
-                    for condition in conditions
-                )
-                
-                if not is_ready:
-                    not_ready_count += 1
-                    node_name = node.get("metadata", {}).get("name", "unknown")
-                    
-                    self.report_generator.add_finding(
-                        category="node_health",
-                        severity=Severity.CRITICAL,
-                        title=f"Node {node_name} not ready",
-                        description=f"Node {node_name} is not in Ready state",
-                        affected_resources=[node_name],
-                        recommendations=["Check node logs", "Verify kubelet status", "Check node connectivity"],
-                        evidence=["Node status: Not Ready"],
-                        source_tool="agentic_kubectl"
-                    )
-            
-            return {
-                "success": True,
-                "summary": f"Analyzed {total_nodes} nodes: {not_ready_count} not ready",
-                "details": {
-                    "total": total_nodes,
-                    "ready": total_nodes - not_ready_count,
-                    "not_ready": not_ready_count
-                }
-            }
-        except Exception as e:
-            return {"success": False, "error": str(e), "summary": "Failed to analyze nodes"}
-    
-    async def _tool_get_resource_metrics(self) -> Dict[str, Any]:
-        """Tool: Get resource metrics."""
-        try:
-            node_metrics = await self.kubectl.get_node_metrics()
-            pod_metrics = await self.kubectl.get_pod_metrics()
-            
-            metrics_available = node_metrics["success"] or pod_metrics["success"]
-            
-            if not metrics_available:
-                self.report_generator.add_finding(
-                    category="monitoring",
-                    severity=Severity.MEDIUM,
-                    title="Resource metrics unavailable",
-                    description="Node and pod resource metrics are not available",
-                    affected_resources=["metrics-server"],
-                    recommendations=["Install metrics-server", "Verify metrics-server deployment"],
-                    evidence=["kubectl top commands failed"],
-                    source_tool="agentic_kubectl"
-                )
-            
-            return {
-                "success": True,
-                "summary": f"Resource metrics: nodes={'available' if node_metrics['success'] else 'unavailable'}, pods={'available' if pod_metrics['success'] else 'unavailable'}",
-                "details": {
-                    "node_metrics": node_metrics["success"],
-                    "pod_metrics": pod_metrics["success"]
-                }
-            }
-        except Exception as e:
-            return {"success": False, "error": str(e), "summary": "Failed to get resource metrics"}
-    
-    async def _tool_analyze_events(self, namespace: Optional[str] = None) -> Dict[str, Any]:
-        """Tool: Analyze events."""
-        try:
-            events = await self.kubectl.get_events(namespace=namespace)
-            
-            if not events["success"]:
-                return {"success": False, "error": events.get("error"), "summary": "Failed to get events"}
-            
-            event_items = events.get("parsed_output", {}).get("items", [])
-            warning_count = 0
-            
-            for event in event_items:
-                if event.get("type") == "Warning":
-                    warning_count += 1
-                    reason = event.get("reason", "")
-                    
-                    # Add findings for significant warnings
-                    if reason in ["Failed", "Unhealthy", "FailedScheduling", "ErrImagePull"]:
-                        involved_object = event.get("involvedObject", {})
-                        object_name = involved_object.get("name", "unknown")
-                        object_kind = involved_object.get("kind", "unknown")
-                        
-                        self.report_generator.add_finding(
-                            category="cluster_events",
-                            severity=Severity.HIGH if reason in ["Failed", "ErrImagePull"] else Severity.MEDIUM,
-                            title=f"Warning event: {reason}",
-                            description=event.get("message", ""),
-                            affected_resources=[f"{object_kind}/{object_name}"],
-                            recommendations=["Check resource status", "Review logs", "Verify configuration"],
-                            evidence=[f"Event: {reason}"],
-                            source_tool="agentic_kubectl"
-                        )
-            
-            return {
-                "success": True,
-                "summary": f"Analyzed {len(event_items)} events: {warning_count} warnings",
-                "details": {
-                    "total": len(event_items),
-                    "warnings": warning_count
-                }
-            }
-        except Exception as e:
-            return {"success": False, "error": str(e), "summary": "Failed to analyze events"}
-    
-    async def _tool_run_k8sgpt_analysis(self) -> Dict[str, Any]:
-        """Tool: Run k8sgpt analysis."""
-        try:
-            k8sgpt_result = await self.k8sgpt.analyze_cluster()
-            
-            if k8sgpt_result["success"]:
-                issues_count = self.k8sgpt._count_issues(k8sgpt_result)
-                
-                if issues_count > 0:
-                    self.report_generator.add_finding(
-                        category="ai_analysis",
-                        severity=Severity.MEDIUM,
-                        title=f"K8sgpt detected {issues_count} issues",
-                        description="AI-powered analysis found potential cluster issues",
-                        affected_resources=["cluster"],
-                        recommendations=["Review k8sgpt detailed output", "Address identified issues"],
-                        evidence=[k8sgpt_result.get("stdout", "")[:200]],
-                        source_tool="agentic_k8sgpt"
-                    )
-                
-                return {
-                    "success": True,
-                    "summary": f"K8sgpt analysis completed: {issues_count} issues found",
-                    "details": {"issues_count": issues_count}
-                }
-            else:
-                return {
-                    "success": False,
-                    "error": k8sgpt_result.get("error"),
-                    "summary": "K8sgpt analysis failed"
-                }
-        except Exception as e:
-            return {"success": False, "error": str(e), "summary": "Failed to run k8sgpt analysis"}
-    
-    async def _tool_analyze_workloads(self, namespace: Optional[str] = None) -> Dict[str, Any]:
-        """Tool: Analyze workloads."""
-        try:
-            deployments = await self.kubectl.get_deployments(namespace=namespace)
-            services = await self.kubectl.get_services(namespace=namespace)
-            
-            deployment_count = 0
-            service_count = 0
-            unhealthy_deployments = 0
-            
-            if deployments["success"]:
-                deployment_items = deployments.get("parsed_output", {}).get("items", [])
-                deployment_count = len(deployment_items)
-                
-                for deployment in deployment_items:
-                    status = deployment.get("status", {})
-                    replicas = status.get("replicas", 0)
-                    ready_replicas = status.get("readyReplicas", 0)
-                    
-                    if ready_replicas < replicas:
-                        unhealthy_deployments += 1
-                        name = deployment.get("metadata", {}).get("name", "unknown")
-                        ns = deployment.get("metadata", {}).get("namespace", "unknown")
-                        
-                        self.report_generator.add_finding(
-                            category="workload_health",
-                            severity=Severity.MEDIUM,
-                            title=f"Deployment {name} not fully ready",
-                            description=f"Deployment has {ready_replicas}/{replicas} replicas ready",
-                            affected_resources=[f"deployment/{ns}/{name}"],
-                            recommendations=["Check pod status", "Review deployment events"],
-                            evidence=[f"Ready replicas: {ready_replicas}/{replicas}"],
-                            source_tool="agentic_kubectl"
-                        )
-            
-            if services["success"]:
-                service_items = services.get("parsed_output", {}).get("items", [])
-                service_count = len(service_items)
-            
-            return {
-                "success": True,
-                "summary": f"Analyzed workloads: {deployment_count} deployments ({unhealthy_deployments} unhealthy), {service_count} services",
-                "details": {
-                    "deployments": deployment_count,
-                    "services": service_count,
-                    "unhealthy_deployments": unhealthy_deployments
-                }
-            }
-        except Exception as e:
-            return {"success": False, "error": str(e), "summary": "Failed to analyze workloads"}
-    
-    async def _tool_investigate_specific_resource(self, resource_type: str, resource_name: str, namespace: str = "default") -> Dict[str, Any]:
-        """Tool: Deep dive into specific resource."""
-        try:
-            # This would implement deeper investigation of specific resources
-            # For now, return a placeholder
-            return {
-                "success": True,
-                "summary": f"Investigated {resource_type}/{resource_name} in namespace {namespace}",
-                "details": {"resource_type": resource_type, "resource_name": resource_name, "namespace": namespace}
-            }
-        except Exception as e:
-            return {"success": False, "error": str(e), "summary": f"Failed to investigate {resource_type}/{resource_name}"}
-    
-    async def _tool_check_network_policies(self) -> Dict[str, Any]:
-        """Tool: Check network policies."""
-        try:
-            network_policies = await self.kubectl.get_network_policies()
-            ingresses = await self.kubectl.get_ingresses()
-            
-            policy_count = 0
-            ingress_count = 0
-            
-            if network_policies["success"]:
-                policy_items = network_policies.get("parsed_output", {}).get("items", [])
-                policy_count = len(policy_items)
-            
-            if ingresses["success"]:
-                ingress_items = ingresses.get("parsed_output", {}).get("items", [])
-                ingress_count = len(ingress_items)
-            
-            return {
-                "success": True,
-                "summary": f"Network analysis: {policy_count} policies, {ingress_count} ingresses",
-                "details": {
-                    "network_policies": policy_count,
-                    "ingresses": ingress_count
-                }
-            }
-        except Exception as e:
-            return {"success": False, "error": str(e), "summary": "Failed to check network policies"}
+        }
 
 
-# Convenience function for direct usage
-async def run_agentic_investigation(**kwargs) -> Dict[str, Any]:
+# Convenience function for external callers (preserving existing API)
+async def run_agentic_investigation(namespace: Optional[str] = None,
+                                   include_k8sgpt: bool = True,
+                                   include_events: bool = True,
+                                   timeout: int = 300) -> Dict[str, Any]:
     """
-    Quick function to run agentic investigation.
+    Run an agentic investigation with enhanced AI and knowledge base.
     
     Args:
-        **kwargs: Arguments to pass to run_investigation()
+        namespace: Optional Kubernetes namespace to focus on
+        include_k8sgpt: Whether to include k8sgpt analysis
+        include_events: Whether to include cluster events analysis
+        timeout: Maximum time for investigation in seconds
         
     Returns:
-        Investigation report
+        Investigation report dictionary
     """
     investigator = AgenticInvestigator()
-    return await investigator.run_investigation(**kwargs)
+    return await investigator.run_investigation(namespace, include_k8sgpt, include_events, timeout)
