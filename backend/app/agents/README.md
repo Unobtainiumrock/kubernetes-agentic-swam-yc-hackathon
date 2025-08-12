@@ -169,7 +169,7 @@ The agents require these tools to be available in the container:
 The agentic agent uses Google ADK with this configuration:
 
 ```yaml
-model: "openai/gpt-4o-mini"
+model: "anthropic/claude-opus-4.1"
 provider: "openrouter"
 ```
 

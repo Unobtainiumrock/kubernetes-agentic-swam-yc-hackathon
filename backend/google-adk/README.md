@@ -31,7 +31,7 @@ google-adk/
 ### runtime.yaml
 ```yaml
 provider: openrouter
-model: openai/gpt-4o-mini
+model: anthropic/claude-opus-4.1
 ```
 
 ### Environment Variables
@@ -43,7 +43,7 @@ OPENROUTER_API_KEY=your_api_key_here
 
 Optional:
 ```bash
-MODEL_SLUG=openai/gpt-4o-mini    # Override model from config
+MODEL_SLUG=anthropic/claude-opus-4.1    # Override model from config
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1  # Default API base
 ```
 
