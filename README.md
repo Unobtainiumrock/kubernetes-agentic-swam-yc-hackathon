@@ -9,8 +9,8 @@ This repository provides the complete environment to demonstrate an AI-based age
 Running these two scripts will spin up the clusters and the full-stack React application. (frontend should be running on `localhost:3000`)
 
 ```bash
-./setup-cluster.sh
-./start-fullstack.sh
+make setup-cluster # should be ran in its own terminal instance
+./start-fullstack.sh # ran in another terminal instance
 ```
 
 **Taking Down**
