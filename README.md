@@ -153,6 +153,9 @@ graph TD
         R1["GET /api/agents/history"]
         R2["POST /api/chaos/inject"]
         R3["GET /api/cluster/snapshot"]
+        R4["POST /api/investigations/deterministic"]
+        R5["POST /api/investigations/agentic"]
+        R6["GET /api/monitoring/status"]
     end
 
     E -->|Pushes Agent Updates| WS1 --> A
@@ -162,10 +165,16 @@ graph TD
     A -->|Fetch historical logs| R1
     C -->|Get initial state| R3
     A -->|User Action: Inject Failure| R2
+    A -->|User Action: Start Investigation| R4
+    A -->|User Action: Start AI Investigation| R5
+    D -->|Check Monitor Status| R6
 
     R1 --> E
     R2 --> E
     R3 --> E
+    R4 --> E
+    R5 --> E
+    R6 --> E
 
     classDef frontend fill:#d3e5ef,stroke:#333,stroke-width:1px
     classDef backend fill:#e5f5e0,stroke:#333,stroke-width:1px
@@ -266,9 +275,13 @@ The system includes an autonomous monitoring and investigation pipeline that det
 ```mermaid
 flowchart TD
     A[🔍 Autonomous Monitor] --> B[🚨 Issue Detection]
+    API["📡 REST API Trigger"] --> B
     B --> C[🤖 Deterministic Investigator]
+    B --> C2[🤖 Agentic Investigator]
     C --> D[📊 Cluster Analysis]
+    C2 --> D2[📊 AI-Driven Analysis]
     D --> E[📝 Report Generator]
+    D2 --> E
     E --> F[💾 File Storage]
     F --> G[🌐 Frontend Access]
     
@@ -277,12 +290,14 @@ flowchart TD
     classDef storage fill:#fcf3cf,stroke:#333,stroke-width:3px,font-size:16px
     classDef frontend fill:#d3e5ef,stroke:#333,stroke-width:3px,font-size:16px
     classDef process fill:#f0f0f0,stroke:#333,stroke-width:2px,font-size:16px
+    classDef api fill:#e6f3ff,stroke:#333,stroke-width:3px,font-size:16px
     
     class A monitor
-    class C investigator
+    class C,C2 investigator
     class F storage
     class G frontend
-    class B,D,E process
+    class B,D,D2,E process
+    class API api
 ```
 
 This vertical flow is much more intuitive for showing the sequential steps of the investigation process, making it easier to follow the pipeline from issue detection all the way to frontend access! 🎯
