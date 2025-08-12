@@ -29,6 +29,12 @@ RUN apt update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Node.js and npm for frontend development
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 
 RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
     mv kubectl /usr/local/bin/kubectl && \
@@ -71,6 +77,9 @@ RUN pip3 install --break-system-packages -r backend/requirements.txt && \
 
 # Copy the rest of the code
 COPY . .
+
+# Install frontend dependencies
+RUN cd frontend && npm install
 
 # Set ADK configuration path
 ENV ADK_CONFIG_PATH="/root/backend/google-adk/src/adk_agent/config/runtime.yaml"
