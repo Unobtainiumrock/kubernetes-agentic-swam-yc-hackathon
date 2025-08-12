@@ -18,10 +18,10 @@ import signal
 # Add the api directory to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from agents.tools.kubectl_wrapper import KubectlWrapper
-from agents.deterministic_investigator import DeterministicInvestigator
-from agents.agentic_investigator import AgenticInvestigator
-from log_streamer import AutonomousMonitorStreamer
+from ..agents.tools.kubectl_wrapper import KubectlWrapper
+from ..agents.deterministic_investigator import DeterministicInvestigator
+from ..agents.agentic_investigator import AgenticInvestigator
+from .log_streamer import AutonomousMonitorStreamer
 
 
 class AutonomousMonitor:

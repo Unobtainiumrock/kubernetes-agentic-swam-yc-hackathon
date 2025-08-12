@@ -84,15 +84,32 @@ start_backend() {
 start_autonomous_monitor() {
     echo "🤖 Starting autonomous monitor..."
     
-    cd api
+    cd backend
     export PYTHONPATH="${PWD}:${PYTHONPATH}"
     export BACKEND_URL="http://localhost:8000"
     
     # Create reports directory
     mkdir -p /root/reports 2>/dev/null || mkdir -p $HOME/reports
     
-    # Start autonomous monitor in background
-    python3 autonomous_monitor.py &
+    # Start autonomous monitor in background using the moved service
+    python3 -c "
+import asyncio
+import sys
+sys.path.append('.')
+from app.services.autonomous_monitor import AutonomousMonitor
+
+async def main():
+    monitor = AutonomousMonitor(
+        safe_mode=True,
+        auto_investigate=True,
+        check_interval=30,
+        backend_url='http://localhost:8000'
+    )
+    await monitor.start_monitoring()
+
+if __name__ == '__main__':
+    asyncio.run(main())
+" &
     MONITOR_PID=$!
     
     cd ..
@@ -121,11 +138,15 @@ main() {
     echo "📝 API Documentation: http://localhost:8000/docs"
     echo "🔄 WebSocket endpoint: ws://localhost:8000/ws/agent-status"
     echo ""
-    echo "📋 Key endpoints:"
+    echo "🔌 Available endpoints:"
+    echo "======================="
     echo "  GET  /api/agents/ - Agent status"
     echo "  GET  /api/cluster/ - Cluster status"
     echo "  POST /api/adk/v1/agent/run - AI agent chat"
     echo "  GET  /api/adk/status - ADK integration status"
+    echo "  POST /api/investigations/deterministic - Start deterministic investigation"
+    echo "  POST /api/investigations/agentic - Start AI-driven investigation"
+    echo "  GET  /api/monitoring/status - Autonomous monitor status"
     echo ""
     echo "🚀 To start the frontend:"
     echo "  cd frontend && npm start"

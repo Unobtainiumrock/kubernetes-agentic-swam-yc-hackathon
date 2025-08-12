@@ -17,7 +17,7 @@ import os
 from typing import Dict, List
 from datetime import datetime
 
-from .api import agents, chaos, cluster, adk_agent
+from .api import agents, chaos, cluster, adk_agent, investigations, monitoring
 from .websockets import connection_manager
 
 # Configure logging
@@ -67,6 +67,8 @@ app.include_router(agents.router, prefix="/api/agents", tags=["agents"])
 app.include_router(chaos.router, prefix="/api/chaos", tags=["chaos"])
 app.include_router(cluster.router, prefix="/api/cluster", tags=["cluster"])
 app.include_router(adk_agent.router, prefix="/api/adk", tags=["adk-agent"])
+app.include_router(investigations.router, prefix="/api/investigations", tags=["investigations"])
+app.include_router(monitoring.router, prefix="/api/monitoring", tags=["monitoring"])
 
 @app.get("/")
 async def root():

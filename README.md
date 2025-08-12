@@ -2,6 +2,25 @@
 
 This repository provides the complete environment to demonstrate an AI-based agentic operator managing a Kubernetes cluster. The system uses Kind (Kubernetes in Docker) to simulate a multi-node environment, injects failures using chaos engineering principles, and visualizes the AI agents' response in real-time.
 
+## Quick Setup of the Full Application
+
+**Setting Up**
+
+Running these two scripts will spin up the clusters and the full-stack React application. (frontend should be running on `localhost:3000`)
+
+```bash
+./setup-cluster.sh
+./start-fullstack.sh
+```
+
+**Taking Down**
+
+Running this script will clean up everything by shutting down the clusters and killing the locally running full-stack web app.
+
+```bash
+./cleanup-fullstack.sh
+```
+
 ## 🏛️ System Architecture Overview
 
 The architecture is designed with clear separation of concerns: the **Frontend Dashboard** (our window into the system), the **Backend Coordination Script** (non-agentic demo control and chaos injection), the **AI Agent Swarm** (autonomous healing system), and the **Kubernetes Cluster** (the environment being managed). 
@@ -159,51 +178,56 @@ graph TD
     class R1,R2,R3 rest
 ```
 
-## 🏗️ Backend vs API Directory Architecture
+## 🏗️ Unified Backend Architecture
 
-Understanding the separation between `backend/` and `api/` directories is crucial for working with this system:
+The system has been consolidated into a single, unified backend structure for simplicity and maintainability:
 
-### **📡 `backend/` - Web Application Layer**
-**Purpose:** FastAPI web server that provides HTTP/WebSocket endpoints
+### **📡 `backend/` - Complete Application Layer**
+**Purpose:** Single FastAPI application that handles all functionality
 
 **Responsibilities:**
-- 🌐 **HTTP REST API** endpoints (`/api/agents`, `/api/cluster`, etc.)
+- 🌐 **HTTP REST API** endpoints (`/api/agents`, `/api/cluster`, `/api/investigations`, etc.)
 - 🔌 **WebSocket connections** for real-time streaming
-- 🎯 **Request routing** and response formatting
-- 🔧 **CORS middleware** for frontend integration
-- 📊 **Data aggregation** from various sources
-
-**Key files:**
-- `main.py` - FastAPI application setup
-- `app/api/agents.py` - Agent status endpoints
-- `app/api/cluster.py` - Cluster information endpoints  
-- `app/api/adk_agent.py` - Google ADK integration endpoints
-- `app/websockets/` - WebSocket connection management
-
-### **🤖 `api/` - Autonomous Agent Layer**
-**Purpose:** Standalone monitoring and investigation agents
-
-**Responsibilities:**
-- 🔍 **Autonomous monitoring** of Kubernetes cluster
+- 🤖 **Autonomous monitoring** and investigation agents
 - 🚨 **Issue detection** (CrashLoopBackOff, ImagePullBackOff, etc.)
-- 🤖 **Investigation agents** (Deterministic & Agentic)
 - 📝 **Report generation** and file writing
 - 🛠️ **kubectl/k8sgpt wrapper tools**
+- 🎯 **Request routing** and response formatting
+- 🔧 **CORS middleware** for frontend integration
 
-**Key files:**
-- `autonomous_monitor.py` - Main monitoring process
-- `agents/` - Investigation agent implementations
-- `log_streamer.py` - Sends data to backend
-- Demo/test files for agent development
+**Directory Structure:**
+```
+backend/
+├── app/
+│   ├── main.py                    # FastAPI application setup
+│   ├── api/                       # REST API endpoints
+│   │   ├── agents.py              # Agent status endpoints
+│   │   ├── cluster.py             # Cluster information endpoints  
+│   │   ├── adk_agent.py           # Google ADK integration endpoints
+│   │   ├── investigations.py      # Investigation agent endpoints
+│   │   └── monitoring.py          # Autonomous monitoring endpoints
+│   ├── agents/                    # Investigation agents
+│   │   ├── deterministic_investigator.py
+│   │   ├── agentic_investigator.py
+│   │   ├── base_investigator.py
+│   │   └── tools/                 # kubectl, k8sgpt, report wrappers
+│   ├── services/                  # Background services
+│   │   ├── autonomous_monitor.py  # Main monitoring process
+│   │   └── log_streamer.py        # Sends data to backend
+│   └── websockets/                # WebSocket connection management
+└── google-adk/                    # Google ADK integration
+```
 
-### **🔄 How They Work Together**
+### **🔄 How It Works**
 
 ```mermaid
 flowchart TD
     A[🌐 Frontend Dashboard] -->|HTTP/WebSocket| B[📡 Backend FastAPI]
-    B -->|Receives logs via HTTP| C[🤖 API Autonomous Monitor]
-    C -->|Monitors| D[☸️ Kubernetes Cluster]
-    C -->|Generates| E[📝 Investigation Reports]
+    B -->|Internal calls| C[🤖 Investigation Agents]
+    B -->|Internal calls| D[📊 Autonomous Monitor]
+    C -->|Uses tools| E[🛠️ kubectl/k8sgpt Tools]
+    D -->|Monitors| F[☸️ Kubernetes Cluster]
+    C -->|Generates| G[📝 Investigation Reports]
     B -->|Serves reports| A
     
     classDef frontend fill:#d3e5ef,stroke:#333,stroke-width:2px
@@ -213,35 +237,25 @@ flowchart TD
     
     class A frontend
     class B backend
-    class C agents
-    class D,E k8s
+    class C,D,E agents
+    class F,G k8s
 ```
 
-### **🎯 Why This Separation?**
+### **🎯 Benefits of Unified Architecture**
 
-**✅ Benefits:**
+**✅ Simplified:**
+- Single FastAPI application instead of multiple services
+- Consistent import paths and configuration
+- Container-first development workflow
 
-1. **🔀 Separation of Concerns**
-   - Backend = Web interface/API layer
-   - API = Business logic/autonomous agents
+**✅ Maintainable:**
+- All functionality in one place
+- No duplicate API implementations
+- Unified error handling and logging
 
-2. **🔄 Independent Execution**
-   - Backend can run without agents (for UI development)
-   - Agents can run without backend (for testing)
-
-3. **📦 Different Dependencies**
-   - Backend: FastAPI, WebSocket libraries
-   - API: Kubernetes tools, AI libraries
-
-4. **🚀 Scalability** 
-   - Can run multiple agent instances
-   - Backend handles multiple concurrent users
-
-**💡 Summary:**
-- **`backend/`** = "The web server that talks to users"
-- **`api/`** = "The autonomous agents that watch Kubernetes"
-
-It's essentially a **microservices architecture** where the web layer and agent layer are separated but communicate via HTTP! 🎯
+**✅ Scalable:**
+- Clean separation between API endpoints, agents, and services
+- Easy to add new investigation types or monitoring features
 
 ## 🔄 Autonomous Investigation & Report Flow
 
@@ -527,8 +541,7 @@ Modify `chaos-scenarios.sh` to add:
 ├── Dockerfile                 # Development container definition
 ├── Makefile                   # Build and container management
 ├── frontend/                  # React dashboard with live monitoring
-├── backend/                   # FastAPI server with Google ADK integration
-├── api/                       # Autonomous monitoring and investigation agents
+├── backend/                   # Unified FastAPI application with all functionality
 ├── reports/                   # Generated investigation reports
 ├── setup-cluster.sh           # Optional: Create demo Kubernetes cluster
 ├── deploy-demo-apps.sh        # Optional: Deploy test applications

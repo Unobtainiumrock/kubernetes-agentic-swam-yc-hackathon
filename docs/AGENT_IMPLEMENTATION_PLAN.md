@@ -19,7 +19,7 @@ Our current setup:
 
 **Purpose**: Follow predefined investigation steps for testing and validation
 
-**Location**: `/api/agents/deterministic_investigate.py`
+**Location**: `/backend/app/agents/deterministic_investigator.py`
 
 **Functionality**:
 - Execute sequential investigation steps
@@ -58,7 +58,7 @@ Our current setup:
 
 **Purpose**: AI-driven autonomous investigation using available tools
 
-**Location**: `/api/agents/agentic_investigate.py`
+**Location**: `/backend/app/agents/agentic_investigator.py`
 
 **Functionality**:
 - Leverage Google ADK agent core
@@ -77,7 +77,7 @@ Our current setup:
 
 ### Dependencies and Environment
 
-**Python Dependencies** (to add to `/api/requirements.txt`):
+**Python Dependencies** (included in `/backend/requirements.txt`):
 ```
 asyncio
 subprocess
@@ -96,30 +96,32 @@ pathlib
 ### File Structure
 
 ```
-/api/
-├── agents/
-│   ├── __init__.py
-│   ├── deterministic_investigate.py
-│   ├── agentic_investigate.py
-│   ├── base_investigator.py
-│   └── tools/
-│       ├── __init__.py
-│       ├── kubectl_wrapper.py
-│       ├── k8sgpt_wrapper.py
-│       └── report_generator.py
+/backend/
 ├── app/
-│   └── routers/
-│       └── investigation.py  # New endpoint for agents
-└── requirements.txt  # Updated with new dependencies
+│   ├── agents/
+│   │   ├── __init__.py
+│   │   ├── deterministic_investigator.py
+│   │   ├── agentic_investigator.py
+│   │   ├── base_investigator.py
+│   │   └── tools/
+│   │       ├── __init__.py
+│   │       ├── kubectl_wrapper.py
+│   │       ├── k8sgpt_wrapper.py
+│   │       └── report_generator.py
+│   ├── api/
+│   │   └── investigations.py  # Investigation endpoints
+│   └── services/
+│       └── autonomous_monitor.py
+└── requirements.txt  # Updated with all dependencies
 ```
 
 ### Integration Points
 
 1. **FastAPI Endpoints**:
-   - `POST /v1/investigate/deterministic` - Run deterministic investigation
-   - `POST /v1/investigate/agentic` - Run AI-driven investigation
-   - `GET /v1/investigate/status/{task_id}` - Check investigation status
-   - `GET /v1/investigate/report/{task_id}` - Retrieve investigation report
+   - `POST /api/investigations/deterministic` - Run deterministic investigation
+   - `POST /api/investigations/agentic` - Run AI-driven investigation
+   - `GET /api/investigations/status/{task_id}` - Check investigation status
+   - `GET /api/monitoring/status` - Check autonomous monitor status
 
 2. **Google ADK Integration**:
    - Use existing `CoreAgent` class from `/google-adk/src/adk_agent/agents/core_agent.py`

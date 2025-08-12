@@ -61,14 +61,12 @@ RUN curl -LO https://github.com/k8sgpt-ai/k8sgpt/releases/download/v0.4.22/k8sgp
 
 WORKDIR /root
 
-# Copy requirements files first for better Docker layer caching
+# Copy requirements files
 COPY backend/requirements.txt ./backend/requirements.txt
-COPY api/requirements.txt ./api/requirements.txt
 COPY backend/google-adk/requirements.txt ./backend/google-adk/requirements.txt
 
 # Install Python dependencies (override externally-managed-environment)
 RUN pip3 install --break-system-packages -r backend/requirements.txt && \
-    pip3 install --break-system-packages -r api/requirements.txt && \
     pip3 install --break-system-packages -r backend/google-adk/requirements.txt
 
 # Copy the rest of the code

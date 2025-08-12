@@ -13,7 +13,7 @@ import time
 from datetime import datetime
 
 # Add Google ADK to path (use proper relative path)
-google_adk_path = os.path.join(os.path.dirname(__file__), "../../backend/google-adk/src")
+google_adk_path = os.path.join(os.path.dirname(__file__), "../../../google-adk/src")
 if google_adk_path not in sys.path:
     sys.path.append(google_adk_path)
 

@@ -2,7 +2,9 @@
 .kube/cache/
 .bash_history
 .kube
-.cache
+.cache/
+.local/
+.config/
 
 # Pip install logs and similar accidents
 =*
@@ -12,6 +14,7 @@
 
 # Investigation reports directory
 reports/
+autonomous_report_*.txt
 
 # Python cache and compiled files
 __pycache__/
@@ -19,10 +22,10 @@ __pycache__/
 *$py.class
 *.so
 
-# Investigation reports (these will be generated at runtime)
-api/investigation_reports/
-api/demo_*.json
-api/autonomous_report_*.txt
+# Investigation reports and test files
+backend/investigation_reports/
+backend/demo_*.json
+backend/autonomous_report_*.txt
 
 # Virtual environments
 venv/
@@ -47,20 +50,9 @@ Thumbs.db
 *.temp
 *.log
 
-# Local development files
-.local/
-.cache/
-.config/
-.config/k8sgpt/
-.config/k9s/
-
-# Node modules (if any)
+# Node modules (frontend dependencies)
 node_modules/
+frontend/node_modules/
 
 # Helm cache
 .helm/
-
-# Kind cluster kubeconfig changes (these are dynamic)
-# Note: We keep the base .kube/config but ignore cache
-.kube/cache/
-.kube/http_cache/

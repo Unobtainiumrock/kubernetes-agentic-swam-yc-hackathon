@@ -8,8 +8,9 @@ from ..schemas import RunRequest, RunResponse
 # Add paths for agent imports
 if "/root" not in sys.path:
     sys.path.append("/root")
-# Add Google ADK to path (use proper relative path for container)
-google_adk_path = "/root/backend/google-adk/src"
+# Add Google ADK to path (use proper relative path that works in both environments)
+google_adk_path = os.path.join(os.path.dirname(__file__), "../../../backend/google-adk/src")
+google_adk_path = os.path.abspath(google_adk_path)
 if google_adk_path not in sys.path:
     sys.path.append(google_adk_path)
 
@@ -33,7 +34,12 @@ def get_agent():
         if load_runtime_config is None or create_core_agent is None:
             raise HTTPException(status_code=500, detail="ADK agent modules not available")
         
-        config_path = os.getenv("ADK_CONFIG_PATH", "/root/backend/google-adk/src/adk_agent/config/runtime.yaml")
+        config_path = os.getenv("ADK_CONFIG_PATH")
+        if not config_path:
+            # Use default config path relative to this file
+            default_config = os.path.join(os.path.dirname(__file__), "../../../backend/google-adk/src/adk_agent/config/runtime.yaml")
+            config_path = os.path.abspath(default_config)
+        
         config = load_runtime_config(config_path)
         agent = create_core_agent(config)
         return agent
