@@ -2,6 +2,23 @@
 
 This repository provides the complete environment to demonstrate an AI-based agentic operator managing a Kubernetes cluster. The system uses Kind (Kubernetes in Docker) to simulate a multi-node environment, injects failures using chaos engineering principles, and visualizes the AI agents' response in real-time.
 
+## 📋 Table of Contents
+
+- [🚀 Quick Start - Complete Demo in 4 Commands](#-quick-start---complete-demo-in-4-commands)
+- [📋 Prerequisites](#-prerequisites)
+- [✅ What You Get](#-what-you-get)
+- [🏛️ System Architecture Overview](#️-system-architecture-overview)
+- [🏗️ Container Architecture - Complete Picture](#️-container-architecture---complete-picture)
+- [🏗️ Unified Backend Architecture](#️-unified-backend-architecture)
+- [🔄 Autonomous Investigation & Report Flow](#-autonomous-investigation--report-flow)
+- [🏗️ Kubernetes Cluster Architecture](#️-kubernetes-cluster-architecture)
+- [🔥 Available Chaos Scenarios](#-available-chaos-scenarios)
+- [🎯 Demo Scenarios](#-demo-scenarios)
+- [📊 Monitoring Commands](#-monitoring-commands)
+- [🎯 Success Metrics](#-success-metrics)
+- [🔧 Customization](#-customization)
+- [🤝 Sharing and Replication](#-sharing-and-replication)
+
 ## 🚀 Quick Start - Complete Demo in 4 Commands
 
 ### Prerequisites
@@ -45,31 +62,28 @@ make clean
 ```
 **Complete shutdown:** Removes containers, cluster, and reclaims disk space.
 
-## 🔥 Available Chaos Scenarios
+## 📋 Prerequisites
 
-| Command | Effect | AI Detects |
-|---------|--------|------------|
-| `make chaos-images` | Deploy broken images | ImagePullBackOff |
-| `make chaos-crashes` | Deploy failing apps | CrashLoopBackOff |
-| `make chaos-pods` | Delete healthy pods | Pod recreation events |
-| `make chaos-recovery` | Fix all issues | Recovery validation |
+| Requirement | Installation |
+|-------------|--------------|
+| **Docker** | [Install Docker](https://docs.docker.com/get-docker/) - Must be running |
+| **That's it!** | All other tools (kubectl, kind, etc.) run in containers |
 
-## 🎪 Perfect Demo Flow
+## ✅ What You Get
 
-```bash
-# 1. Clean, healthy start
-make setup-cluster && make deploy-demo-apps && make start-fullstack
+**🌐 Frontend Dashboard**: http://localhost:3000
+- Live log streaming from autonomous agents
+- Real-time cluster health monitoring
+- Investigation reports with clickable links
 
-# 2. Create chaos on-demand (while AI is watching!)
-make chaos-images    # Watch AI detect ImagePullBackOff
-make chaos-crashes   # Watch AI detect CrashLoopBackOff  
+**🔧 Backend API**: http://localhost:8000
+- Autonomous Kubernetes monitoring (every 30 seconds)
+- AI-powered investigation agents
+- Google ADK integration for intelligent analysis
 
-# 3. Demonstrate recovery
-make chaos-recovery  # Show AI recommendations being applied
-
-# 4. Clean shutdown
-make clean
-```
+**📚 API Documentation**: http://localhost:8000/docs
+- Interactive Swagger UI
+- Test all endpoints directly
 
 ## 🏛️ System Architecture Overview
 
@@ -237,6 +251,141 @@ graph TD
     class R1,R2,R3 rest
 ```
 
+## 🏗️ Container Architecture - Complete Picture
+
+The system runs in a **pure container-first architecture** where everything executes inside Docker containers for complete isolation and reproducibility.
+
+### **🐳 Container Execution Environment**
+
+**Inside `k8s-fullstack-container` runs:**
+- ✅ **FastAPI Backend** (uvicorn on port 8000)
+- ✅ **Autonomous Monitor with AI Agents** (Python script calling agents)
+- ✅ **Frontend Dev Server** (Vite on port 3000)  
+- ✅ **All Development Tools**: kubectl, k8sgpt, Python, Node.js, npm
+- ✅ **Google ADK**: Complete AI reasoning framework
+- ✅ **AcmeCorp Knowledge Engine**: Company-specific guidance system
+
+### **🤖 AI Component Relationships**
+
+| **Component** | **Purpose** | **AI Type** | **Relationship** |
+|---------------|-------------|-------------|------------------|
+| **k8sgpt** | **Fast issue detection** | Uses OpenAI/Anthropic APIs | **Input provider** to agents |
+| **Google ADK** | **Intelligent reasoning** | LLM-powered decision making | **Brain** of agentic agent |
+| **Deterministic Agent** | **Structured analysis** | Rule-based + k8sgpt insights | Uses k8sgpt for explanations |
+| **Agentic Agent** | **Adaptive investigation** | Google ADK + k8sgpt + knowledge | **Enhanced** by k8sgpt findings |
+
+### **🔗 Enhanced Intelligence Pipeline**
+
+**1. Issue Discovery & Analysis Flow:**
+```
+kubectl detects issues → k8sgpt explains issues → Google ADK reasons about them → Agent takes action
+```
+
+**2. AI Enhancement Layers:**
+- **k8sgpt**: "Pod X is in CrashLoopBackOff because of OOMKilled"
+- **Google ADK**: "Based on company knowledge, increase memory limits and add monitoring"
+- **Knowledge Engine**: "According to AcmeCorp policy, use these specific resource templates"
+
+**3. Complementary AI Strengths:**
+- **k8sgpt**: Fast, Kubernetes-specific, immediate explanations
+- **Google ADK**: Strategic thinking, cross-component reasoning, company context
+
+### **🏗️ Complete Container Architecture Diagram**
+
+```mermaid
+graph TB
+    subgraph "Host System"
+        Host["🖥️ Docker Host<br/>Only Docker Required"]
+    end
+    
+    subgraph "k8s-fullstack-container"
+        subgraph "Frontend Layer"
+            Vite["⚛️ Vite Dev Server<br/>Port 3000<br/>React + HMR"]
+        end
+        
+        subgraph "Backend Layer"
+            FastAPI["🐍 FastAPI Server<br/>Port 8000<br/>REST + WebSocket"]
+            Monitor["📊 Autonomous Monitor<br/>30s Intervals<br/>Issue Detection"]
+        end
+        
+        subgraph "AI Investigation Layer"
+            DetAgent["🤖 Deterministic Agent<br/>Structured Analysis<br/>kubectl + k8sgpt + reporting"]
+            AgenAgent["🧠 Agentic Agent<br/>Google ADK + k8sgpt<br/>+ Company Knowledge"]
+            Knowledge["📚 AcmeCorp Knowledge<br/>Internal Policies<br/>Best Practices"]
+        end
+        
+        subgraph "Tool Layer"
+            kubectl["⚙️ kubectl<br/>K8s CLI Tool"]
+            k8sgpt["🔍 k8sgpt<br/>AI-Powered Diagnostics<br/>OpenRouter Integration"]
+            GoogleADK["🤖 Google ADK<br/>LLM Framework<br/>Decision Engine"]
+            Python["🐍 Python 3.12<br/>Agent Runtime"]
+            Node["📦 Node.js 18<br/>Frontend Runtime"]
+        end
+    end
+    
+    subgraph "External Kubernetes Cluster"
+        Kind["☸️ Kind Cluster<br/>5 Nodes<br/>Demo Applications"]
+    end
+    
+    subgraph "External AI Services"
+        OpenRouter["🌐 OpenRouter API<br/>Claude 3.5 Sonnet<br/>AI Explanations"]
+    end
+    
+    %% Container internal connections
+    Vite <-->|Proxy Requests| FastAPI
+    FastAPI <-->|Spawns & Manages| Monitor
+    Monitor -->|Triggers| DetAgent
+    Monitor -->|Triggers| AgenAgent
+    DetAgent -->|Uses| kubectl
+    DetAgent -->|Uses| k8sgpt
+    AgenAgent -->|Uses| kubectl
+    AgenAgent -->|Uses| k8sgpt
+    AgenAgent -->|Uses| GoogleADK
+    AgenAgent -->|Queries| Knowledge
+    
+    %% External connections
+    Host -->|Docker Run| FastAPI
+    kubectl -->|API Calls| Kind
+    k8sgpt -->|AI Requests| OpenRouter
+    GoogleADK -->|AI Requests| OpenRouter
+    
+    %% Port mappings
+    Host -->|:3000| Vite
+    Host -->|:8000| FastAPI
+    
+    classDef container fill:#e1f5fe,stroke:#01579b,stroke-width:3px,font-weight:bold
+    classDef frontend fill:#d3e5ef,stroke:#333,stroke-width:2px
+    classDef backend fill:#e5f5e0,stroke:#333,stroke-width:2px
+    classDef ai fill:#f9d5e5,stroke:#333,stroke-width:2px
+    classDef tools fill:#fff3e0,stroke:#333,stroke-width:2px
+    classDef external fill:#fce4ec,stroke:#333,stroke-width:2px
+    classDef host fill:#f3e5f5,stroke:#333,stroke-width:2px
+    
+    class Host host
+    class Vite frontend
+    class FastAPI,Monitor backend
+    class DetAgent,AgenAgent,Knowledge ai
+    class kubectl,k8sgpt,GoogleADK,Python,Node tools
+    class Kind,OpenRouter external
+```
+
+### **🎯 Container-First Benefits**
+
+**✅ Complete Isolation:**
+- No host dependencies except Docker
+- Consistent environment across all machines
+- No "works on my machine" issues
+
+**✅ Development Efficiency:**
+- Hot reloading for both frontend and backend
+- All tools pre-installed and configured
+- Single command setup and teardown
+
+**✅ Production Similarity:**
+- Same containerized approach as production
+- Kubernetes tools exactly as deployed
+- Realistic networking and resource constraints
+
 ## 🏗️ Unified Backend Architecture
 
 The system has been consolidated into a single, unified backend structure for simplicity and maintainability:
@@ -393,48 +542,24 @@ The demo cluster includes:
   - Database tier (zone: us-west-1c)
   - Cache tier (zone: us-west-1a)
 
-## 📋 Prerequisites
+## 🔥 Available Chaos Scenarios
 
-| Requirement | Installation |
-|-------------|--------------|
-| **Docker** | [Install Docker](https://docs.docker.com/get-docker/) - Must be running |
-| **That's it!** | All other tools (kubectl, kind, etc.) run in containers |
+| Command | Effect | AI Detects |
+|---------|--------|------------|
+| `make chaos-images` | Deploy broken images | ImagePullBackOff |
+| `make chaos-crashes` | Deploy failing apps | CrashLoopBackOff |
+| `make chaos-pods` | Delete healthy pods | Pod recreation events |
+| `make chaos-recovery` | Fix all issues | Recovery validation |
 
-## ✅ What You Get
+## 🎯 Demo Scenarios
 
-**🌐 Frontend Dashboard**: http://localhost:3000
-- Live log streaming from autonomous agents
-- Real-time cluster health monitoring
-- Investigation reports with clickable links
-
-**🔧 Backend API**: http://localhost:8000
-- Autonomous Kubernetes monitoring (every 30 seconds)
-- AI-powered investigation agents
-- Google ADK integration for intelligent analysis
-
-**📚 API Documentation**: http://localhost:8000/docs
-- Interactive Swagger UI
-- Test all endpoints directly
-
-## 🎯 Success Metrics
-- **Real-time AI analysis** with company knowledge
-- **Dynamic issue detection** as you create problems
-- **Intelligent recommendations** for resolution
-- **100% containerized workflow** - no host dependencies
-
-## 🧹 Alternative Cleanup Options
-
-For manual cleanup or troubleshooting:
-```bash
-# Complete cleanup (recommended)
-make clean
-
-# Script-based cleanup
-./cleanup-fullstack.sh
-
-# Light cleanup (containers only)
-make clean-containers
-```
+| Scenario | Actions | What You'll See |
+|----------|---------|-----------------|
+| **Pod Resilience** | `make chaos-pods` | Pods deleted and recreated automatically |
+| **Image Failures** | `make chaos-images` | ImagePullBackOff detection and analysis |
+| **App Crashes** | `make chaos-crashes` | CrashLoopBackOff investigation |
+| **Resource Pressure** | Scale deployments | Resource exhaustion and recovery |
+| **Recovery** | `make chaos-recovery` | AI-guided problem resolution |
 
 ## 📊 Monitoring Commands
 
@@ -447,15 +572,11 @@ make clean-containers
 | **Autoscaling** | `kubectl get hpa --all-namespaces` |
 | **Services** | `kubectl get services --all-namespaces` |
 
-## 🎯 Demo Scenarios
-
-| Scenario | Actions | What You'll See |
-|----------|---------|-----------------|
-| **Pod Resilience** | `make chaos-pods` | Pods deleted and recreated automatically |
-| **Image Failures** | `make chaos-images` | ImagePullBackOff detection and analysis |
-| **App Crashes** | `make chaos-crashes` | CrashLoopBackOff investigation |
-| **Resource Pressure** | Scale deployments | Resource exhaustion and recovery |
-| **Recovery** | `make chaos-recovery` | AI-guided problem resolution |
+## 🎯 Success Metrics
+- **Real-time AI analysis** with company knowledge
+- **Dynamic issue detection** as you create problems
+- **Intelligent recommendations** for resolution
+- **100% containerized workflow** - no host dependencies
 
 ## 🔧 Customization
 
