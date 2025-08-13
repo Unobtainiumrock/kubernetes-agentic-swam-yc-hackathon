@@ -32,7 +32,9 @@ AGENT_CHECK_INTERVAL=30
 
 ### 1. Setup & Deploy (Clean Start)
 ```bash
-make setup-cluster && make deploy-demo-apps && make start-fullstack
+make setup-cluster
+make deploy-demo-apps
+make start-fullstack
 ```
 **What this does:**
 - Creates 5-node Kubernetes cluster
