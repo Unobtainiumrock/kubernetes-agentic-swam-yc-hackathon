@@ -1,1 +1,0 @@
-1. The times of reports created are incorrect. They should reflect the time relative to the time zone of the person viewing them.
