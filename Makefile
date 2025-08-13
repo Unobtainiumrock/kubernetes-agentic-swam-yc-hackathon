@@ -82,13 +82,77 @@ start-fullstack: build-local
 	@echo "⚛️  Frontend: Running in container with hot reload"
 	@echo "☸️  Cluster: Managed via containers"
 	@echo ""
-	${DOCKER_CMD} run -it --rm --name k8s-fullstack-container \
+	@if [ -f .env ]; then \
+		echo "Loading environment from .env..."; \
+		set -a && . ./.env && set +a && \
+		${DOCKER_CMD} run -it --rm --name k8s-fullstack-container \
+			-e OPENROUTER_API_KEY \
+			-e AGENT_SAFE_MODE \
+			-e AGENT_AUTO_INVESTIGATE \
+			-e AGENT_CHECK_INTERVAL \
+			-v ${PWD}:/root \
+			-v ${HOME}/.kube:/root/.kube \
+			-v /var/run/docker.sock:/var/run/docker.sock \
+			-p 3000:3000 -p 8000:8000 \
+			--network host \
+			${TAG_LATEST} bash -c "cd /root && ./scripts/start-fullstack-container.sh"; \
+	else \
+		echo "Warning: .env file not found, starting without environment variables"; \
+		${DOCKER_CMD} run -it --rm --name k8s-fullstack-container \
+			-v ${PWD}:/root \
+			-v ${HOME}/.kube:/root/.kube \
+			-v /var/run/docker.sock:/var/run/docker.sock \
+			-p 3000:3000 -p 8000:8000 \
+			--network host \
+			${TAG_LATEST} bash -c "cd /root && ./scripts/start-fullstack-container.sh"; \
+	fi
+
+# Chaos Engineering Scenarios (Container-First)
+chaos: build-local
+	@echo "🔥 Starting Chaos Engineering Menu..."
+	${DOCKER_CMD} run -it --rm --name k8s-chaos-container \
 		-v ${PWD}:/root \
 		-v ${HOME}/.kube:/root/.kube \
 		-v /var/run/docker.sock:/var/run/docker.sock \
-		-p 3000:3000 -p 8000:8000 \
 		--network host \
-		${TAG_LATEST} bash -c "cd /root && ./scripts/start-fullstack-container.sh"
+		${TAG_LATEST} bash -c "cd /root && ./scripts/chaos-scenarios.sh"
+
+# Individual chaos scenarios
+chaos-pods: build-local
+	@echo "💥 Pod Failure Chaos..."
+	${DOCKER_CMD} run --rm --name k8s-chaos-pods \
+		-v ${PWD}:/root \
+		-v ${HOME}/.kube:/root/.kube \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		--network host \
+		${TAG_LATEST} bash -c "cd /root && ./scripts/chaos-scenarios.sh 1"
+
+chaos-images: build-local
+	@echo "🖼️ Image Pull Failure Chaos..."
+	${DOCKER_CMD} run --rm --name k8s-chaos-images \
+		-v ${PWD}:/root \
+		-v ${HOME}/.kube:/root/.kube \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		--network host \
+		${TAG_LATEST} bash -c "cd /root && ./scripts/chaos-scenarios.sh 2"
+
+chaos-crashes: build-local
+	@echo "💥 Crash Loop Chaos..."
+	${DOCKER_CMD} run --rm --name k8s-chaos-crashes \
+		-v ${PWD}:/root \
+		-v ${HOME}/.kube:/root/.kube \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		--network host \
+		${TAG_LATEST} bash -c "cd /root && ./scripts/chaos-scenarios.sh 3"
+
+chaos-recovery: build-local
+	@echo "🔧 Recovery Demonstration..."
+	${DOCKER_CMD} run --rm --name k8s-chaos-recovery \
+		-v ${PWD}:/root \
+		-v ${HOME}/.kube:/root/.kube \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		--network host \
+		${TAG_LATEST} bash -c "cd /root && ./scripts/chaos-scenarios.sh 8"
 
 # Legacy approach for comparison
 dev-up: build-local
@@ -102,18 +166,16 @@ clean:
 	@echo "================================"
 	@echo "🛑 Stopping full stack application..."
 	
-	# Stop frontend processes
-	@pkill -f "vite.*3000" 2>/dev/null || echo "   Frontend already stopped"
-	@pkill -f "npm.*dev" 2>/dev/null || echo "   NPM dev server already stopped"
-	
-	# Stop backend containers
-	@echo "🐳 Stopping backend containers..."
-	${DOCKER_CMD} stop k8s-dev-container 2>/dev/null || echo "   Backend container already stopped"
-	${DOCKER_CMD} rm k8s-dev-container 2>/dev/null || echo "   Backend container already removed"
+	# Stop Docker containers first (most important)
+	@echo "🐳 Stopping containers..."
 	${DOCKER_CMD} stop k8s-fullstack-container 2>/dev/null || echo "   Fullstack container already stopped"
 	${DOCKER_CMD} rm k8s-fullstack-container 2>/dev/null || echo "   Fullstack container already removed"
+	${DOCKER_CMD} stop k8s-dev-container 2>/dev/null || echo "   Backend container already stopped"
+	${DOCKER_CMD} rm k8s-dev-container 2>/dev/null || echo "   Backend container already removed"
 	${DOCKER_CMD} stop ${CONTAINER_NAME} 2>/dev/null || echo "   Dev container already stopped"
 	${DOCKER_CMD} rm ${CONTAINER_NAME} 2>/dev/null || echo "   Dev container already removed"
+	
+	# Note: Frontend/backend processes run inside containers, so no host cleanup needed
 	
 	# Clean up Kubernetes cluster
 	@echo "☸️  Removing Kubernetes cluster..."
@@ -163,9 +225,16 @@ help:
 	@echo "  make start-fullstack    - 🚀 Start full stack (pure container)"
 	@echo "  make clean              - Complete cleanup when done"
 	@echo ""
+	@echo "🔥 Chaos Engineering (Container-First):"
+	@echo "  make chaos              - Interactive chaos menu (pure container)"
+	@echo "  make chaos-pods         - Delete healthy pods (container)"
+	@echo "  make chaos-images       - Deploy broken images (container)"
+	@echo "  make chaos-crashes      - Deploy crashing apps (container)"
+	@echo "  make chaos-recovery     - Fix all chaos issues (container)"
+	@echo ""
 	@echo "🔧 Alternative Commands:"
 	@echo "  ./start-fullstack.sh         - Hybrid approach (host + container)"
 	@echo "  ./chaos-scenarios.sh         - Manual chaos engineering"
 	@echo "  ./scripts/setup-cluster.sh   - Direct script (requires host tools)"
 
-.PHONY: build build-local run run-local exec exec-user run-local-with-stack start-fullstack dev-up clean clean-containers push help
+.PHONY: build build-local run run-local exec exec-user run-local-with-stack start-fullstack dev-up clean clean-containers push help chaos chaos-pods chaos-images chaos-crashes chaos-recovery

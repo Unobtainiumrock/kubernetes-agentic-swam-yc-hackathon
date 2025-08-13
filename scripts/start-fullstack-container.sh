@@ -169,9 +169,9 @@ if [ ! -d "node_modules" ]; then
     npm install
 fi
 
-# Start Vite dev server with container-friendly settings
+# Start Vite dev server with container-friendly settings (polling for file watching)
 print_status "Starting Vite dev server..."
-npm run dev -- --host 0.0.0.0 --port 3000 &
+CHOKIDAR_USEPOLLING=true npm run dev -- --host 0.0.0.0 --port 3000 &
 FRONTEND_PID=$!
 
 # Wait for frontend to be ready

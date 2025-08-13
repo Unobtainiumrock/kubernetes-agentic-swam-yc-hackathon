@@ -22,302 +22,203 @@ NC='\033[0m' # No Color
 show_menu() {
     echo -e "${BLUE}🔥 Kubernetes Chaos Engineering Scenarios${NC}"
     echo "=========================================="
-    echo "1. Pod Failure Simulation"
-    echo "2. Node Drain Simulation"
-    echo "3. Resource Pressure (CPU/Memory)"
-    echo "4. Network Partition Simulation"
-    echo "5. Storage Failure Simulation"
-    echo "6. Rolling Update with Failures"
-    echo "7. Cascading Failure Scenario"
-    echo "8. Recovery Demonstration"
+    echo "1. Pod Failure Simulation (Delete healthy pods)"
+    echo "2. Image Pull Failures (Deploy broken images)"
+    echo "3. Crash Loop Simulation (Deploy failing apps)"
+    echo "4. Resource Pressure (CPU/Memory)"
+    echo "5. Service Scaling Chaos (Scale up/down)"
+    echo "6. Network Issues (DNS/connectivity)"
+    echo "7. Rolling Update Failures"
+    echo "8. Recovery Demonstration (Fix issues)"
     echo "9. Show Current Status"
     echo "0. Exit"
     echo ""
 }
 
-# pod_failure_simulation() {
-#     echo -e "${RED}💥 Simulating Pod Failures${NC}"
-#     echo "Randomly killing pods across different namespaces..."
+# Pod failure simulation - delete healthy pods
+pod_failure_simulation() {
+    echo -e "${RED}💥 Simulating Pod Failures${NC}"
+    echo "Deleting healthy pods to trigger recreation..."
     
+    # Delete frontend pods
+    echo "🎯 Deleting frontend pods..."
+    kubectl delete pod -l app=frontend -n frontend --ignore-not-found=true
+    
+    # Delete some backend pods
+    echo "🎯 Deleting backend pods..."
+    kubectl delete pod -l app=backend -n backend --ignore-not-found=true | head -2
+    
+    echo "✅ Pod deletion chaos complete! Pods will be recreated automatically."
+    echo "💡 Watch: kubectl get pods --all-namespaces -w"
+}
 
-#     # Kill random frontend pods
-#     FRONTEND_PODS=($(kubectl get pods -n frontend --no-headers -o custom-columns=":metadata.name" | grep '^frontend-app' | head -2))
-#     for pod in "${FRONTEND_PODS[@]}"; do
-#         echo "Deleting $pod"
-#         kubectl delete pod "$pod" -n frontend &
-#     done
-#     wait
+# Image pull failure simulation
+image_pull_failure_simulation() {
+    echo -e "${RED}🖼️ Simulating Image Pull Failures${NC}"
+    echo "Deploying pods with nonexistent images..."
+    
+    cat <<EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: broken-image-app
+  namespace: frontend
+  labels:
+    app: broken-image-app
+    tier: frontend
+    chaos: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: broken-image-app
+  template:
+    metadata:
+      labels:
+        app: broken-image-app
+        tier: frontend
+        chaos: "true"
+    spec:
+      containers:
+      - name: broken-app
+        image: nginx:nonexistent-tag-12345
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "50m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+EOF
+    
+    echo "✅ ImagePullBackOff chaos deployed!"
+    echo "💡 Watch: kubectl get pods -n frontend | grep broken-image"
+}
 
+# Crash loop simulation
+crash_loop_simulation() {
+    echo -e "${RED}💥 Simulating Crash Loop Failures${NC}"
+    echo "Deploying applications that immediately crash..."
     
-    # # Kill random backend pods
-    # BACKEND_PODS=($(kubectl get pods -n backend -o name | head -2))
-    # for pod in "${BACKEND_PODS[@]}"; do
-    #     echo "Deleting $pod"
-    #     kubectl delete "$pod" -n backend &
-    # done
+    cat <<EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crash-loop-app
+  namespace: frontend
+  labels:
+    app: crash-loop-app
+    tier: frontend
+    chaos: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crash-loop-app
+  template:
+    metadata:
+      labels:
+        app: crash-loop-app
+        tier: frontend
+        chaos: "true"
+    spec:
+      containers:
+      - name: crash-app
+        image: busybox:1.35
+        command: ["/bin/sh"]
+        args: ["-c", "echo 'Starting application...' && sleep 2 && echo 'Critical error occurred!' && exit 1"]
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "25m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+EOF
     
-#     wait
-#     echo -e "${YELLOW}⏳ Waiting for pods to recover...${NC}"
-#     sleep 10
-#     kubectl get pods --all-namespaces | grep -E "(frontend|backend)"
-# }
+    echo "✅ CrashLoopBackOff chaos deployed!"
+    echo "💡 Watch: kubectl get pods -n frontend | grep crash-loop"
+}
 
-# node_drain_simulation() {
-#     echo -e "${RED}🚫 Simulating Node Drain${NC}"
-    
-#     # Get a worker node
-#     NODE=$(kubectl get nodes -o name | grep -v control-plane | head -1 | cut -d'/' -f2)
-    
-#     if [ -z "$NODE" ]; then
-#         echo -e "${RED}No worker nodes found!${NC}"
-#         return 1
-#     fi
-    
-#     echo "Draining node: $NODE"
-#     kubectl cordon "$NODE"
-#     kubectl drain "$NODE" --ignore-daemonsets --delete-emptydir-data --force --grace-period=30
-    
-#     echo -e "${YELLOW}Node $NODE is now drained. Pods should reschedule to other nodes.${NC}"
-#     echo "Run option 8 (Recovery) to uncordon the node."
-    
-#     sleep 5
-#     kubectl get pods --all-namespaces -o wide | grep -v Running || true
-# }
-
+# Resource pressure simulation
 resource_pressure_simulation() {
-    echo -e "${RED}🔥 Creating AGGRESSIVE Resource Pressure${NC}"
-    echo "This will create significant stress that should impact demo applications..."
+    echo -e "${RED}⚡ Simulating Resource Pressure${NC}"
+    echo "Scaling up CPU-intensive workloads..."
     
-    # Scale up existing CPU stress to maximum
-    echo -e "${YELLOW}📈 Scaling up existing CPU stress deployment...${NC}"
-    kubectl scale deployment cpu-stress --replicas=8 -n monitoring 2>/dev/null || echo "CPU stress deployment not found, creating new one..."
+    # Scale up CPU stress pods
+    kubectl scale deployment cpu-stress --replicas=3 -n monitoring --ignore-not-found=true
     
-    # Create multiple aggressive stress deployments
-    echo -e "${YELLOW}💾 Creating aggressive memory pressure (will consume ~2GB per node)...${NC}"
-    cat <<EOF | kubectl apply -f -
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: memory-bomb
-  namespace: monitoring
-spec:
-  replicas: 6
-  selector:
-    matchLabels:
-      app: memory-bomb
-  template:
-    metadata:
-      labels:
-        app: memory-bomb
-    spec:
-      containers:
-      - name: stress
-        image: polinux/stress
-        command: ["stress"]
-        args: ["--vm", "2", "--vm-bytes", "400M", "--vm-hang", "0", "--timeout", "600s"]
-        resources:
-          requests:
-            memory: "300Mi"
-            cpu: "200m"
-          limits:
-            memory: "500Mi"
-            cpu: "500m"
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: cpu-bomb
-  namespace: monitoring
-spec:
-  replicas: 8
-  selector:
-    matchLabels:
-      app: cpu-bomb
-  template:
-    metadata:
-      labels:
-        app: cpu-bomb
-    spec:
-      containers:
-      - name: stress
-        image: polinux/stress
-        command: ["stress"]
-        args: ["--cpu", "2", "--timeout", "600s", "--verbose"]
-        resources:
-          requests:
-            memory: "50Mi"
-            cpu: "400m"
-          limits:
-            memory: "100Mi"
-            cpu: "800m"
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: io-bomb
-  namespace: monitoring
-spec:
-  replicas: 4
-  selector:
-    matchLabels:
-      app: io-bomb
-  template:
-    metadata:
-      labels:
-        app: io-bomb
-    spec:
-      containers:
-      - name: stress
-        image: polinux/stress
-        command: ["stress"]
-        args: ["--io", "4", "--hdd", "2", "--hdd-bytes", "100M", "--timeout", "600s"]
-        resources:
-          requests:
-            memory: "100Mi"
-            cpu: "200m"
-          limits:
-            memory: "200Mi"
-            cpu: "400m"
-EOF
+    # Scale down critical services
+    echo "🎯 Reducing backend capacity..."
+    kubectl scale deployment backend-app --replicas=1 -n backend
     
-    echo -e "${RED}⚠️  AGGRESSIVE RESOURCE PRESSURE DEPLOYED!${NC}"
-    echo -e "${YELLOW}This will create:${NC}"
-    echo "  • 6 memory-bomb pods consuming ~400MB each (2.4GB total)"
-    echo "  • 8 cpu-bomb pods consuming 2 CPU cores each"
-    echo "  • 4 io-bomb pods creating disk I/O pressure"
-    echo "  • Plus scaled CPU stress deployment"
-    echo ""
-    echo -e "${RED}Expected effects:${NC}"
-    echo "  • Node resource exhaustion"
-    echo "  • Pod evictions due to memory pressure"
-    echo "  • Application slowdowns and potential crashes"
-    echo "  • Kubernetes scheduler stress"
-    echo ""
-    echo -e "${YELLOW}⏳ Monitoring cluster state...${NC}"
-    
-    # Show immediate impact
-    sleep 10
-    echo -e "${BLUE}📊 Current resource usage:${NC}"
-    kubectl top nodes 2>/dev/null || echo "Metrics loading..."
-    echo ""
-    echo -e "${BLUE}🔍 Checking for pod evictions:${NC}"
-    kubectl get events --sort-by='.lastTimestamp' | grep -E '(Evicted|FailedScheduling|OutOfMemory)' | tail -5 || echo "No evictions yet..."
-    echo ""
-    echo -e "${YELLOW}💡 Monitor with:${NC}"
-    echo "  kubectl top nodes"
-    echo "  kubectl get pods --all-namespaces | grep -E '(Evicted|Pending|Error)'"
-    echo "  kubectl get events --sort-by='.lastTimestamp' | tail -10"
-    echo "  watch 'kubectl get pods --all-namespaces'"
+    echo "✅ Resource pressure chaos applied!"
+    echo "💡 Watch: kubectl top nodes"
 }
 
-network_partition_simulation() {
+# Service scaling chaos
+service_scaling_chaos() {
+    echo -e "${RED}📊 Simulating Service Scaling Issues${NC}"
+    echo "Creating availability problems through scaling..."
+    
+    # Scale different services randomly
+    kubectl scale deployment frontend-app --replicas=1 -n frontend
+    kubectl scale deployment cache-app --replicas=0 -n backend
+    
+    echo "✅ Service scaling chaos applied!"
+    echo "💡 Watch: kubectl get deployments --all-namespaces"
+}
+
+# Network issues simulation (placeholder)
+network_issues_simulation() {
     echo -e "${RED}🌐 Simulating Network Issues${NC}"
+    echo "Breaking service connectivity..."
     
-    # Create a network policy that blocks traffic between namespaces
-    cat <<EOF | kubectl apply -f -
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: deny-cross-namespace
-  namespace: backend
-spec:
-  podSelector: {}
-  policyTypes:
-  - Ingress
-  - Egress
-  ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          name: backend
-  egress:
-  - to:
-    - namespaceSelector:
-        matchLabels:
-          name: backend
-EOF
+    # Patch a service to use wrong image (will cause DNS resolution issues)
+    kubectl patch deployment database-app -n database -p '{"spec":{"template":{"spec":{"containers":[{"name":"database","image":"nonexistent:broken"}]}}}}'
     
-    echo -e "${YELLOW}Network policy applied. Cross-namespace communication blocked.${NC}"
-    echo "This simulates network partition between services."
+    echo "✅ Network chaos applied!"
+    echo "💡 Watch: kubectl get pods -n database"
 }
 
-storage_failure_simulation() {
-    echo -e "${RED}💾 Simulating Storage Issues${NC}"
+# Rolling update failures (placeholder) 
+rolling_update_failure() {
+    echo -e "${RED}🔄 Simulating Rolling Update Failures${NC}"
+    echo "Triggering failed rolling updates..."
     
-    # Scale down database to simulate storage issues
-    kubectl scale statefulset database-app --replicas=0 -n database
+    # Update to a broken image
+    kubectl set image deployment/backend-app backend=httpd:nonexistent -n backend
     
-    echo -e "${YELLOW}Database scaled down to simulate storage failure.${NC}"
-    echo "Applications depending on database will start failing."
-    
-    sleep 5
-    kubectl get pods -n database
+    echo "✅ Rolling update chaos applied!"
+    echo "💡 Watch: kubectl rollout status deployment/backend-app -n backend"
 }
 
-# rolling_update_failure() {
-#     echo -e "${RED}🔄 Simulating Failed Rolling Update${NC}"
-    
-#     # Update frontend with a bad image
-#     kubectl patch deployment frontend-app -n frontend -p='{"spec":{"template":{"spec":{"containers":[{"name":"nginx","image":"nginx:bad-tag"}]}}}}'
-    
-#     echo -e "${YELLOW}Rolling update initiated with bad image. Deployment will fail.${NC}"
-#     sleep 10
-#     kubectl rollout status deployment/frontend-app -n frontend --timeout=60s || true
-#     kubectl get pods -n frontend
-# }
-
-# cascading_failure() {
-#     echo -e "${RED}💀 Simulating Cascading Failure${NC}"
-    
-#     echo "Step 1: Database failure"
-#     kubectl scale statefulset database-app --replicas=0 -n database
-#     sleep 5
-    
-#     echo "Step 2: Backend overload (scaling up to simulate traffic)"
-#     kubectl scale deployment backend-app --replicas=8 -n backend
-#     sleep 5
-    
-#     echo "Step 3: Resource exhaustion"
-#     kubectl scale deployment cpu-stress --replicas=4 -n monitoring
-#     sleep 5
-    
-#     echo "Step 4: Frontend instability"
-#     kubectl patch deployment frontend-app -n frontend -p='{"spec":{"template":{"spec":{"containers":[{"name":"nginx","resources":{"limits":{"memory":"50Mi"}}}]}}}}'
-    
-#     echo -e "${YELLOW}Cascading failure initiated. Multiple systems affected.${NC}"
-#     sleep 10
-#     kubectl get pods --all-namespaces | grep -v Running || true
-# }
-
+# Recovery demonstration
 recovery_demonstration() {
-    echo -e "${GREEN}🔧 Initiating Recovery Procedures${NC}"
+    echo -e "${GREEN}🔧 Demonstrating Recovery${NC}"
+    echo "Fixing chaos issues..."
     
-    # Uncordon any cordoned nodes
-    for node in $(kubectl get nodes -o name | cut -d'/' -f2); do
-        kubectl uncordon "$node" 2>/dev/null || true
-    done
+    # Remove chaos deployments
+    echo "🧹 Removing broken deployments..."
+    kubectl delete deployment broken-image-app -n frontend --ignore-not-found=true
+    kubectl delete deployment crash-loop-app -n frontend --ignore-not-found=true
     
-    # Scale back database
-    kubectl scale statefulset database-app --replicas=2 -n database
+    # Fix broken images
+    echo "🔧 Fixing broken images..."
+    kubectl patch deployment database-app -n database -p '{"spec":{"template":{"spec":{"containers":[{"name":"database","image":"redis:alpine"}]}}}}' --ignore-not-found=true
+    kubectl set image deployment/backend-app backend=httpd:2.4 -n backend --ignore-not-found=true
     
-    # Fix frontend deployment
-    kubectl patch deployment frontend-app -n frontend -p='{"spec":{"template":{"spec":{"containers":[{"name":"nginx","image":"nginx:1.21","resources":{"limits":{"memory":"128Mi"}}}]}}}}'
+    # Scale services back to normal
+    echo "📈 Restoring normal capacity..."
+    kubectl scale deployment frontend-app --replicas=3 -n frontend --ignore-not-found=true
+    kubectl scale deployment backend-app --replicas=4 -n backend --ignore-not-found=true
+    kubectl scale deployment cache-app --replicas=2 -n backend --ignore-not-found=true
+    kubectl scale deployment cpu-stress --replicas=1 -n monitoring --ignore-not-found=true
     
-    # Scale back backend
-    kubectl scale deployment backend-app --replicas=4 -n backend
-    
-    # Reduce stress
-    kubectl scale deployment cpu-stress --replicas=1 -n monitoring
-    kubectl delete deployment memory-stress -n monitoring --ignore-not-found=true
-    
-    # Remove network policy
-    kubectl delete networkpolicy deny-cross-namespace -n backend --ignore-not-found=true
-    
-    echo -e "${YELLOW}⏳ Waiting for recovery...${NC}"
-    sleep 30
-    
-    echo -e "${GREEN}✅ Recovery procedures completed!${NC}"
-    show_status
+    echo "✅ Recovery complete!"
+    echo "💡 Watch: kubectl get pods --all-namespaces"
 }
 
 show_status() {
@@ -348,12 +249,12 @@ show_status() {
 execute_scenario() {
     case $1 in
         1) pod_failure_simulation ;;
-        2) node_drain_simulation ;;
-        3) resource_pressure_simulation ;;
-        4) network_partition_simulation ;;
-        5) storage_failure_simulation ;;
-        6) rolling_update_failure ;;
-        7) cascading_failure ;;
+        2) image_pull_failure_simulation ;;
+        3) crash_loop_simulation ;;
+        4) resource_pressure_simulation ;;
+        5) service_scaling_chaos ;;
+        6) network_issues_simulation ;;
+        7) rolling_update_failure ;;
         8) recovery_demonstration ;;
         9|status) show_status ;;
         cleanup) recovery_demonstration ;;
@@ -373,12 +274,12 @@ show_usage() {
     echo ""
     echo "Available scenarios:"
     echo "  1 - Pod Failure Simulation"
-    echo "  2 - Node Drain Simulation"
-    echo "  3 - Resource Pressure (CPU/Memory/IO)"
-    echo "  4 - Network Partition Simulation"
-    echo "  5 - Storage Failure Simulation"
-    echo "  6 - Rolling Update with Failures"
-    echo "  7 - Cascading Failure Scenario"
+    echo "  2 - Image Pull Failures"
+    echo "  3 - Crash Loop Simulation"
+    echo "  4 - Resource Pressure (CPU/Memory/IO)"
+    echo "  5 - Service Scaling Chaos"
+    echo "  6 - Network Issues (DNS/connectivity)"
+    echo "  7 - Rolling Update Failures"
     echo "  8 - Recovery Demonstration"
     echo ""
     echo "Examples:"

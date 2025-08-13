@@ -2,23 +2,73 @@
 
 This repository provides the complete environment to demonstrate an AI-based agentic operator managing a Kubernetes cluster. The system uses Kind (Kubernetes in Docker) to simulate a multi-node environment, injects failures using chaos engineering principles, and visualizes the AI agents' response in real-time.
 
-## Quick Setup of the Full Application
+## 🚀 Quick Start - Complete Demo in 4 Commands
 
-**Setting Up**
-
-Running these two scripts will spin up the clusters and the full-stack React application. (frontend should be running on `localhost:3000`)
-
+### Prerequisites
 ```bash
-make setup-cluster # should be ran in its own terminal instance
-./start-fullstack.sh # ran in another terminal instance
+# Set up environment variables in .env file:
+OPENROUTER_API_KEY=<your-key-here>
+AGENT_SAFE_MODE=false
+AGENT_AUTO_INVESTIGATE=true
+AGENT_CHECK_INTERVAL=30
 ```
 
-**Taking Down**
+### 1. Setup & Deploy (Clean Start)
+```bash
+make setup-cluster && make deploy-demo-apps && make start-fullstack
+```
+**What this does:**
+- Creates 5-node Kubernetes cluster
+- Deploys healthy applications only
+- Starts AI monitoring system
+- Opens frontend at http://localhost:3000
 
-Running this script will clean up everything by shutting down the clusters and killing the locally running full-stack web app.
+### 2. Create Chaos (On-Demand)
+```bash
+# Interactive menu with 8 scenarios
+make chaos
+
+# Or direct commands:
+make chaos-images    # Deploy ImagePullBackOff pods
+make chaos-crashes   # Deploy CrashLoopBackOff pods  
+make chaos-pods      # Delete healthy pods (auto-recreate)
+```
+
+### 3. Watch AI Response
+- **Frontend**: Real-time AI investigations at http://localhost:3000
+- **Reports**: Detailed analysis in `reports/` directory
+- **Enhanced Reasoning**: Company knowledge integration
+
+### 4. Cleanup
+```bash
+make clean
+```
+**Complete shutdown:** Removes containers, cluster, and reclaims disk space.
+
+## 🔥 Available Chaos Scenarios
+
+| Command | Effect | AI Detects |
+|---------|--------|------------|
+| `make chaos-images` | Deploy broken images | ImagePullBackOff |
+| `make chaos-crashes` | Deploy failing apps | CrashLoopBackOff |
+| `make chaos-pods` | Delete healthy pods | Pod recreation events |
+| `make chaos-recovery` | Fix all issues | Recovery validation |
+
+## 🎪 Perfect Demo Flow
 
 ```bash
-./cleanup-fullstack.sh
+# 1. Clean, healthy start
+make setup-cluster && make deploy-demo-apps && make start-fullstack
+
+# 2. Create chaos on-demand (while AI is watching!)
+make chaos-images    # Watch AI detect ImagePullBackOff
+make chaos-crashes   # Watch AI detect CrashLoopBackOff  
+
+# 3. Demonstrate recovery
+make chaos-recovery  # Show AI recommendations being applied
+
+# 4. Clean shutdown
+make clean
 ```
 
 ## 🏛️ System Architecture Overview
@@ -204,28 +254,7 @@ The system has been consolidated into a single, unified backend structure for si
 - 🎯 **Request routing** and response formatting
 - 🔧 **CORS middleware** for frontend integration
 
-**Directory Structure:**
-```
-backend/
-├── app/
-│   ├── main.py                    # FastAPI application setup
-│   ├── api/                       # REST API endpoints
-│   │   ├── agents.py              # Agent status endpoints
-│   │   ├── cluster.py             # Cluster information endpoints  
-│   │   ├── adk_agent.py           # Google ADK integration endpoints
-│   │   ├── investigations.py      # Investigation agent endpoints
-│   │   └── monitoring.py          # Autonomous monitoring endpoints
-│   ├── agents/                    # Investigation agents
-│   │   ├── deterministic_investigator.py
-│   │   ├── agentic_investigator.py
-│   │   ├── base_investigator.py
-│   │   └── tools/                 # kubectl, k8sgpt, report wrappers
-│   ├── services/                  # Background services
-│   │   ├── autonomous_monitor.py  # Main monitoring process
-│   │   └── log_streamer.py        # Sends data to backend
-│   └── websockets/                # WebSocket connection management
-└── google-adk/                    # Google ADK integration
-```
+
 
 ### **🔄 How It Works**
 
@@ -366,77 +395,12 @@ The demo cluster includes:
 
 ## 📋 Prerequisites
 
-Before running this demo, ensure you have the following installed:
+| Requirement | Installation |
+|-------------|--------------|
+| **Docker** | [Install Docker](https://docs.docker.com/get-docker/) - Must be running |
+| **That's it!** | All other tools (kubectl, kind, etc.) run in containers |
 
-### Docker
-- [Docker](https://docs.docker.com/get-docker/) - Must be running
-
-### Kind (Kubernetes in Docker)
-
-**macOS:**
-```bash
-brew install kind
-```
-
-**Linux:**
-```bash
-# For AMD64 / x86_64
-[ $(uname -m) = x86_64 ] && curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
-# For ARM64
-[ $(uname -m) = aarch64 ] && curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-arm64
-chmod +x ./kind
-sudo mv ./kind /usr/local/bin/kind
-```
-
-**Windows:**
-```powershell
-# Using Chocolatey
-choco install kind
-
-# Or download binary directly
-curl.exe -Lo kind-windows-amd64.exe https://kind.sigs.k8s.io/dl/v0.20.0/kind-windows-amd64
-Move-Item .\kind-windows-amd64.exe c:\some-dir-in-your-PATH\kind.exe
-```
-
-### kubectl
-
-**macOS:**
-```bash
-brew install kubectl
-```
-
-**Linux:**
-```bash
-curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-chmod +x kubectl
-sudo mv kubectl /usr/local/bin/
-```
-
-**Windows:**
-```powershell
-# Using Chocolatey
-choco install kubernetes-cli
-
-# Or using PowerShell
-curl.exe -LO "https://dl.k8s.io/release/v1.28.0/bin/windows/amd64/kubectl.exe"
-# Move kubectl.exe to a directory in your PATH
-```
-
-## 🚀 Quick Start
-
-### Single Command Setup
-```bash
-./start-fullstack.sh
-```
-
-This **one command** handles everything:
-- ✅ **Builds development container** with all tools (kubectl, k8sgpt, Python, etc.)
-- ✅ **Starts backend services** (FastAPI + Autonomous Monitor) in container
-- ✅ **Installs frontend dependencies** (if needed)
-- ✅ **Starts React frontend** with hot reload
-- ✅ **Sets up networking** with automatic proxying
-
-### What You Get
+## ✅ What You Get
 
 **🌐 Frontend Dashboard**: http://localhost:3000
 - Live log streaming from autonomous agents
@@ -444,7 +408,7 @@ This **one command** handles everything:
 - Investigation reports with clickable links
 
 **🔧 Backend API**: http://localhost:8000
-- Autonomous Kubernetes monitoring (every 1 second)
+- Autonomous Kubernetes monitoring (every 30 seconds)
 - AI-powered investigation agents
 - Google ADK integration for intelligent analysis
 
@@ -452,116 +416,54 @@ This **one command** handles everything:
 - Interactive Swagger UI
 - Test all endpoints directly
 
-### Prerequisites Setup (Optional)
+## 🎯 Success Metrics
+- **Real-time AI analysis** with company knowledge
+- **Dynamic issue detection** as you create problems
+- **Intelligent recommendations** for resolution
+- **100% containerized workflow** - no host dependencies
 
-If you want to set up your own Kubernetes cluster for testing:
+## 🧹 Alternative Cleanup Options
 
+For manual cleanup or troubleshooting:
 ```bash
-# 1. Create demo cluster with chaos apps
-chmod +x setup-cluster.sh && ./setup-cluster.sh
+# Complete cleanup (recommended)
+make clean
 
-# 2. Deploy applications with intentional failures
-chmod +x deploy-demo-apps.sh && ./deploy-demo-apps.sh
+# Script-based cleanup
+./cleanup-fullstack.sh
 
-# 3. Run chaos scenarios (optional)
-chmod +x chaos-scenarios.sh && ./chaos-scenarios.sh
-```
-
-**Note**: The full stack application will work with any accessible Kubernetes cluster - it doesn't require the demo cluster setup.
-
-## 🧹 Cleanup
-
-To remove the entire cluster and clean up resources:
-```bash
-chmod +x cleanup.sh
-./cleanup.sh
+# Light cleanup (containers only)
+make clean-containers
 ```
 
 ## 📊 Monitoring Commands
 
-```bash
-# View cluster status
-kubectl get nodes -o wide
-kubectl get pods --all-namespaces
-
-# Monitor resource usage
-kubectl top nodes
-kubectl top pods --all-namespaces
-
-# Check autoscaling
-kubectl get hpa --all-namespaces
-
-# View services
-kubectl get services --all-namespaces
-
-# Check ingress
-kubectl get ingress --all-namespaces
-```
+| Purpose | Command |
+|---------|---------|
+| **Cluster Status** | `kubectl get nodes -o wide` |
+| **All Pods** | `kubectl get pods --all-namespaces` |
+| **Resource Usage** | `kubectl top nodes` |
+| **Pod Resources** | `kubectl top pods --all-namespaces` |
+| **Autoscaling** | `kubectl get hpa --all-namespaces` |
+| **Services** | `kubectl get services --all-namespaces` |
 
 ## 🎯 Demo Scenarios
 
-### Basic Pod Resilience
-1. Kill frontend pods and watch them recover
-2. Scale applications up/down
-3. Observe HPA behavior under load
-
-### Node Failure Simulation
-1. Drain a worker node
-2. Watch pods reschedule to healthy nodes
-3. Demonstrate node recovery
-
-### Resource Exhaustion
-1. Create CPU/Memory pressure
-2. Observe pod evictions
-3. Watch cluster auto-scaling responses
-
-### Network Issues
-1. Apply network policies
-2. Simulate network partitions
-3. Demonstrate service mesh behavior
-
-### Storage Failures
-1. Scale down StatefulSets
-2. Simulate persistent volume issues
-3. Test backup/recovery procedures
+| Scenario | Actions | What You'll See |
+|----------|---------|-----------------|
+| **Pod Resilience** | `make chaos-pods` | Pods deleted and recreated automatically |
+| **Image Failures** | `make chaos-images` | ImagePullBackOff detection and analysis |
+| **App Crashes** | `make chaos-crashes` | CrashLoopBackOff investigation |
+| **Resource Pressure** | Scale deployments | Resource exhaustion and recovery |
+| **Recovery** | `make chaos-recovery` | AI-guided problem resolution |
 
 ## 🔧 Customization
 
-### Modify Cluster Configuration
-Edit `kind-cluster-config.yaml` to:
-- Add more nodes
-- Change node labels
-- Modify networking settings
-- Add custom port mappings
-
-### Add More Applications
-Extend `deploy-demo-apps.sh` to include:
-- Additional microservices
-- Different database types
-- Monitoring stack (Prometheus, Grafana)
-- Service mesh (Istio, Linkerd)
-
-### Create Custom Chaos Scenarios
-Modify `chaos-scenarios.sh` to add:
-- Custom failure patterns
-- Specific application failures
-- Time-based scenarios
-- Automated recovery procedures
-
-## 📁 Key Components
-
-```
-├── start-fullstack.sh         # 🚀 Single command to start everything
-├── run-streaming-stack.sh     # Backend services orchestration
-├── Dockerfile                 # Development container definition
-├── Makefile                   # Build and container management
-├── frontend/                  # React dashboard with live monitoring
-├── backend/                   # Unified FastAPI application with all functionality
-├── reports/                   # Generated investigation reports
-├── setup-cluster.sh           # Optional: Create demo Kubernetes cluster
-├── deploy-demo-apps.sh        # Optional: Deploy test applications
-└── chaos-scenarios.sh         # Optional: Chaos engineering scenarios
-```
+| Component | File | Customize |
+|-----------|------|-----------|
+| **Cluster Config** | `kind-cluster-config.yaml` | Nodes, labels, networking |
+| **Demo Apps** | `scripts/deploy-demo-apps.sh` | Add services, databases, monitoring |
+| **Chaos Scenarios** | `scripts/chaos-scenarios.sh` | Custom failure patterns |
 
 ## 🤝 Sharing and Replication
 
@@ -569,47 +471,11 @@ This entire setup is designed to be easily shared and replicated:
 
 1. **Clone this repository**
 2. **Ensure Docker is running**
-3. **Run the full stack** - `./start-fullstack.sh`
+3. **Set up .env file** with your OpenRouter API key
+4. **Run the demo** - `make setup-cluster && make deploy-demo-apps && make start-fullstack`
 
-The containerized approach ensures consistent environments across different machines and users. No complex setup required!
+The pure container-first approach ensures consistent environments across different machines and users. No complex setup required!
 
-## 🐛 Troubleshooting
+---
 
-### Common Issues
-
-**Docker not running:**
-```bash
-# Start Docker Desktop or Docker daemon
-open -a Docker
-```
-
-**Kind cluster creation fails:**
-```bash
-# Check Docker resources and try again
-kind delete cluster --name=demo-cluster
-./setup-cluster.sh
-```
-
-**Pods stuck in Pending:**
-```bash
-# Check node resources and events
-kubectl describe nodes
-kubectl get events --sort-by=.metadata.creationTimestamp
-```
-
-**Metrics not available:**
-```bash
-# Wait for metrics server to be ready
-kubectl get pods -n kube-system | grep metrics-server
-```
-
-## 📚 Learning Resources
-
-- [Kind Documentation](https://kind.sigs.k8s.io/)
-- [Kubernetes Documentation](https://kubernetes.io/docs/)
-- [Chaos Engineering Principles](https://principlesofchaos.org/)
-- [kubectl Cheat Sheet](https://kubernetes.io/docs/reference/kubectl/cheatsheet/)
-
-## 🎉 Happy Demoing!
-
-This environment provides a realistic Kubernetes setup for demonstrating resilience patterns, failure scenarios, and recovery procedures. Perfect for training, workshops, and proof-of-concepts.
+**That's it!** Pure container-first AI-powered Kubernetes investigation demo. 🧠⚡

@@ -392,9 +392,8 @@ class AutonomousMonitor:
                 print("🛡️  Using deterministic investigator (no API costs)")
                 investigator = DeterministicInvestigator()
             else:
-                print("⚠️  Full mode: Could use AI investigator (may cost credits)")
-                # For now, still use deterministic even in full mode for safety
-                investigator = DeterministicInvestigator()
+                print("⚠️  Full mode: Using AI investigator (may cost credits)")
+                investigator = AgenticInvestigator()
             
             # Create timestamp for report filename
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
