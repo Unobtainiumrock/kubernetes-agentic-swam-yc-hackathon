@@ -58,6 +58,10 @@ class AutonomousMonitor:
         )
         self.logger = logging.getLogger(__name__)
         
+        # Investigation tracking to prevent repeated investigations
+        self.investigated_issues = {}  # resource_name -> last_investigation_time
+        self.investigation_cooldown = 300  # 5 minutes between investigations of same issue
+        
         # Setup graceful shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
@@ -375,9 +379,28 @@ class AutonomousMonitor:
         if not issues:
             return
         
-        # Prevent investigation spam - wait at least 30 seconds between investigations
+        # Check if any issues need investigation (not in cooldown)
+        current_time = now_local()
+        issues_to_investigate = []
+        
+        for issue in issues:
+            resource = issue.get("resource", "unknown")
+            last_investigated = self.investigated_issues.get(resource)
+            
+            if last_investigated:
+                time_since_investigation = (current_time - last_investigated).total_seconds()
+                if time_since_investigation < self.investigation_cooldown:
+                    continue  # Still in cooldown
+            
+            issues_to_investigate.append(issue)
+        
+        if not issues_to_investigate:
+            print(f"🔄 All {len(issues)} issues recently investigated, skipping (cooldown: {self.investigation_cooldown//60}min)")
+            return
+        
+        # Prevent investigation spam - wait at least 30 seconds between any investigations
         if self.last_investigation_time:
-            time_since_last = (now_local() - self.last_investigation_time).total_seconds()
+            time_since_last = (current_time - self.last_investigation_time).total_seconds()
             if time_since_last < 30:
                 return
         
@@ -445,6 +468,12 @@ class AutonomousMonitor:
                 print(f"✅ Investigation complete! Report saved to {report_filename}")
                 findings_count = len(investigator.report_data.get('findings', []))
                 print(f"📋 Summary: {findings_count} findings identified")
+                
+                # Mark all investigated issues with timestamp
+                investigation_time = now_local()
+                for issue in issues_to_investigate:
+                    resource = issue.get("resource", "unknown")
+                    self.investigated_issues[resource] = investigation_time
                 
                 # Stream investigation completion
                 if self.streamer:
