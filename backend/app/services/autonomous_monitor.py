@@ -77,9 +77,34 @@ class AutonomousMonitor:
         """Analyze pods for specific issues like CrashLoopBackOff, ImagePullBackOff, etc."""
         issues = []
         
+        # System pods to exclude from application monitoring
+        SYSTEM_POD_PREFIXES = [
+            "kube-proxy",      # Kubernetes networking
+            "kindnet",         # Kind networking
+            "coredns",         # DNS
+            "etcd",           # etcd database
+            "kube-apiserver", # API server
+            "kube-controller-manager", # Controller manager
+            "kube-scheduler"   # Scheduler
+        ]
+        
+        SYSTEM_NAMESPACES = [
+            "kube-system",     # Core Kubernetes
+            "kube-public",     # Public Kubernetes
+            "kube-node-lease", # Node lease
+            "local-path-storage" # Kind storage
+        ]
+        
         for pod in pod_items:
             pod_name = pod.get("metadata", {}).get("name", "unknown")
             namespace = pod.get("metadata", {}).get("namespace", "default")
+            
+            # Skip system infrastructure pods - focus on application pods
+            if namespace in SYSTEM_NAMESPACES:
+                continue
+                
+            if any(pod_name.startswith(prefix) for prefix in SYSTEM_POD_PREFIXES):
+                continue
             phase = pod.get("status", {}).get("phase", "Unknown")
             
             # Check container statuses for specific issues
