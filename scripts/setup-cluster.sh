@@ -152,12 +152,13 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         exit 1
     fi
     
-    # Setup k8sgpt with OpenRouter (same as your AI agents)
-    echo "Configuring k8sgpt to use OpenRouter API..."
+    # Setup k8sgpt with OpenRouter via OpenAI-compatible endpoint
+    echo "Configuring k8sgpt to use OpenRouter API via OpenAI backend..."
     if [ -n "$OPENROUTER_API_KEY" ]; then
-        k8sgpt auth add openrouter -b openrouter -m anthropic/claude-3.5-sonnet:beta -k "$OPENROUTER_API_KEY" -u "https://openrouter.ai/api/v1"
-        k8sgpt auth default -b openrouter
-        echo "✅ K8sgpt configured with OpenRouter"
+        # Use openai backend but point to OpenRouter's endpoint
+        k8sgpt auth add openrouter -b openai -m gpt-4 -k "$OPENROUTER_API_KEY" -u "https://openrouter.ai/api/v1"
+        k8sgpt auth default -p openrouter
+        echo "✅ K8sgpt configured with OpenRouter (via OpenAI backend)"
     else
         echo "⚠️  OPENROUTER_API_KEY not set, k8sgpt will run without AI explanations"
         echo "   Set OPENROUTER_API_KEY in .env to enable AI features"
