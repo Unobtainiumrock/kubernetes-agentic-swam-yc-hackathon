@@ -9,6 +9,7 @@ import subprocess
 import time
 from abc import ABC, abstractmethod
 from datetime import datetime
+from ..utils import now_local, format_timestamp
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 
@@ -25,7 +26,7 @@ class BaseInvestigator(ABC):
     
     def __init__(self, investigation_id: Optional[str] = None):
         self.investigation_id = investigation_id or f"inv_{int(time.time())}"
-        self.start_time = datetime.utcnow()
+        self.start_time = now_local()
         self.kubectl = KubectlWrapper()
         self.k8sgpt = K8sgptWrapper()
         self.report_generator = ReportGenerator()

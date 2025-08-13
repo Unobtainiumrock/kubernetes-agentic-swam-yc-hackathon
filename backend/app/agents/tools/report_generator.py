@@ -4,6 +4,7 @@ Report generator for Kubernetes investigation findings.
 import json
 import time
 from datetime import datetime
+from ...utils import now_local, format_timestamp
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
 from enum import Enum
@@ -117,7 +118,7 @@ class ReportGenerator:
             affected_resources=affected_resources,
             recommendations=recommendations,
             evidence=evidence,
-            timestamp=datetime.now().isoformat(),
+            timestamp=format_timestamp(now_local()),
             source_tool=source_tool
         )
         self.findings.append(finding)

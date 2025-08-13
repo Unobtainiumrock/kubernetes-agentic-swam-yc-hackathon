@@ -16,6 +16,7 @@ from datetime import datetime
 import signal
 
 # Using proper relative imports - no path manipulation needed
+from ..utils import now_local, format_timestamp, format_filename_timestamp, format_log_timestamp
 
 from ..agents.tools.kubectl_wrapper import KubectlWrapper
 from ..agents.deterministic_investigator import DeterministicInvestigator
@@ -350,7 +351,7 @@ class AutonomousMonitor:
         
         # Prevent investigation spam - wait at least 30 seconds between investigations
         if self.last_investigation_time:
-            time_since_last = (datetime.now() - self.last_investigation_time).total_seconds()
+            time_since_last = (now_local() - self.last_investigation_time).total_seconds()
             if time_since_last < 30:
                 return
         
@@ -384,7 +385,7 @@ class AutonomousMonitor:
         
         # Mark investigation as in progress
         self.investigation_in_progress = True
-        self.last_investigation_time = datetime.now()
+        self.last_investigation_time = now_local()
         
         try:
             # Run SAFE deterministic investigation (no AI API calls)
@@ -396,7 +397,7 @@ class AutonomousMonitor:
                 investigator = AgenticInvestigator()
             
             # Create timestamp for report filename
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            timestamp = format_filename_timestamp()
             report_filename = f"/root/reports/autonomous_report_{timestamp}.txt"
             
             print(f"📝 Investigation results will be saved to: {report_filename}")
@@ -439,7 +440,7 @@ class AutonomousMonitor:
     
     def format_investigation_report(self, report_data, issues):
         """Format investigation report for file output."""
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        timestamp = format_timestamp()
         
         report = f"""
 🤖 AUTONOMOUS KUBERNETES INVESTIGATION REPORT
@@ -486,7 +487,7 @@ End of Report
     
     def format_health_status(self, health_data):
         """Format health data for terminal display with enhanced issue information."""
-        timestamp = datetime.now().strftime("%H:%M:%S")
+        timestamp = format_log_timestamp()
         
         if health_data.get("error"):
             return f"❌ [{timestamp}] Health check failed: {health_data['error']}"
@@ -557,7 +558,7 @@ End of Report
                 
             except Exception as e:
                 self.logger.error(f"Health check loop error: {e}")
-                print(f"❌ [{datetime.now().strftime('%H:%M:%S')}] Monitor error: {e}")
+                print(f"❌ [{format_log_timestamp()}] Monitor error: {e}")
                 await asyncio.sleep(self.check_interval)
     
     async def start_monitoring(self):

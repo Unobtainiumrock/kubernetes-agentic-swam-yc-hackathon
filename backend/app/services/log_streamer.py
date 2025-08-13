@@ -10,6 +10,7 @@ import asyncio
 import logging
 import json
 from datetime import datetime
+from ..utils import now_local, format_timestamp
 from typing import Dict, List, Optional
 import aiohttp
 import os
@@ -42,7 +43,7 @@ class LogStreamer:
                            details: Optional[Dict] = None):
         """Send a log entry to the backend"""
         log_entry = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": now_local().isoformat(),
             "agent_id": agent_id,
             "log_level": log_level,
             "message": message,
@@ -88,7 +89,7 @@ class LogStreamer:
             "nodes_total": nodes_total,
             "pods_running": pods_running,
             "pods_total": pods_total,
-            "last_update": datetime.utcnow().isoformat()
+            "last_update": now_local().isoformat()
         }
         
         try:
