@@ -49,12 +49,28 @@ run-local-with-stack:
 # Cluster management targets (container-first)
 setup-cluster: build-local
 	@echo "🏗️  Setting up Kubernetes cluster (container-first)..."
-	${DOCKER_CMD} run -it --rm --name ${CONTAINER_NAME}-setup \
-		-v ${PWD}:/root \
-		-v ${HOME}/.kube:/root/.kube \
-		-v /var/run/docker.sock:/var/run/docker.sock \
-		--network host \
-		${TAG_LATEST} bash -c "cd /root && ./scripts/setup-cluster.sh"
+	@if [ -f .env ]; then \
+		echo "Loading environment from .env..."; \
+		set -a && . ./.env && set +a && \
+		${DOCKER_CMD} run -it --rm --name ${CONTAINER_NAME}-setup \
+			-e OPENROUTER_API_KEY \
+			-e AGENT_SAFE_MODE \
+			-e AGENT_AUTO_INVESTIGATE \
+			-e AGENT_CHECK_INTERVAL \
+			-v ${PWD}:/root \
+			-v ${HOME}/.kube:/root/.kube \
+			-v /var/run/docker.sock:/var/run/docker.sock \
+			--network host \
+			${TAG_LATEST} bash -c "cd /root && ./scripts/setup-cluster.sh"; \
+	else \
+		echo "Warning: .env file not found, setting up cluster without AI features"; \
+		${DOCKER_CMD} run -it --rm --name ${CONTAINER_NAME}-setup \
+			-v ${PWD}:/root \
+			-v ${HOME}/.kube:/root/.kube \
+			-v /var/run/docker.sock:/var/run/docker.sock \
+			--network host \
+			${TAG_LATEST} bash -c "cd /root && ./scripts/setup-cluster.sh"; \
+	fi
 
 deploy-demo-apps: 
 	@echo "🚀 Deploying demo applications..."
