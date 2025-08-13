@@ -147,8 +147,8 @@ resource_pressure_simulation() {
     echo -e "${RED}⚡ Simulating Resource Pressure${NC}"
     echo "Scaling up CPU-intensive workloads..."
     
-    # Scale up CPU stress pods
-    kubectl scale deployment cpu-stress --replicas=3 -n monitoring --ignore-not-found=true
+    # Scale up CPU stress pods (if it exists)
+    kubectl scale deployment cpu-stress --replicas=3 -n monitoring 2>/dev/null || echo "   CPU stress deployment not found, skipping..."
     
     # Scale down critical services
     echo "🎯 Reducing backend capacity..."

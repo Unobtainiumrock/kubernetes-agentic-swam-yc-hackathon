@@ -330,12 +330,13 @@ class AutonomousMonitor:
             # Determine overall health based on issues
             critical_issues = [i for i in all_issues if i.get("severity") == "critical"]
             high_issues = [i for i in all_issues if i.get("severity") == "high"]
+            medium_issues = [i for i in all_issues if i.get("severity") == "medium"]
             
             # Basic health: nodes ready and no failed pods
             basic_healthy = (nodes_ready == nodes_total and nodes_ready > 0 and pods_failed == 0)
             
-            # Enhanced health: basic health + no critical/high severity issues
-            enhanced_healthy = basic_healthy and len(critical_issues) == 0 and len(high_issues) == 0
+            # Enhanced health: basic health + no critical/high/medium severity issues  
+            enhanced_healthy = basic_healthy and len(critical_issues) == 0 and len(high_issues) == 0 and len(medium_issues) == 0
             
             return {
                 "healthy": enhanced_healthy,
