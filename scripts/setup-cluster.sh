@@ -63,16 +63,22 @@ fi
 echo -e "${YELLOW}⏳ Waiting for cluster to be fully ready...${NC}"
 kubectl wait --for=condition=Ready nodes --all --timeout=300s
 
-# Install NGINX Ingress Controller
-echo -e "${BLUE}🌐 Installing NGINX Ingress Controller...${NC}"
+# Install NGINX Ingress Controller (Kind-specific version)
+echo -e "${BLUE}🌐 Installing NGINX Ingress Controller for Kind...${NC}"
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
 
-# Wait for ingress controller to be ready
-echo -e "${YELLOW}⏳ Waiting for NGINX Ingress Controller to be ready...${NC}"
+# Wait for ingress controller deployment to be created first
+echo -e "${YELLOW}⏳ Waiting for NGINX Ingress deployment to be created...${NC}"
+kubectl wait --namespace ingress-nginx \
+  --for=condition=available deployment/ingress-nginx-controller \
+  --timeout=300s
+
+# Additional wait for pods to be ready
+echo -e "${YELLOW}⏳ Waiting for NGINX Ingress pods to be ready...${NC}"
 kubectl wait --namespace ingress-nginx \
   --for=condition=ready pod \
   --selector=app.kubernetes.io/component=controller \
-  --timeout=300s
+  --timeout=300s || echo -e "${YELLOW}⚠️  NGINX pods may still be starting (this is normal in Kind)${NC}"
 
 # Install Metrics Server (for HPA and resource monitoring)
 echo -e "${BLUE}📊 Installing Metrics Server...${NC}"
@@ -146,8 +152,16 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         exit 1
     fi
     
-    # Run k8sgpt auth
-    yes | k8sgpt auth
+    # Setup k8sgpt with OpenRouter (same as your AI agents)
+    echo "Configuring k8sgpt to use OpenRouter API..."
+    if [ -n "$OPENROUTER_API_KEY" ]; then
+        k8sgpt auth add openrouter -b openrouter -m anthropic/claude-3.5-sonnet:beta -k "$OPENROUTER_API_KEY" -u "https://openrouter.ai/api/v1"
+        k8sgpt auth default -b openrouter
+        echo "✅ K8sgpt configured with OpenRouter"
+    else
+        echo "⚠️  OPENROUTER_API_KEY not set, k8sgpt will run without AI explanations"
+        echo "   Set OPENROUTER_API_KEY in .env to enable AI features"
+    fi
     
     echo ""
     echo -e "${GREEN}✅ k8sgpt authentication completed!${NC}"
