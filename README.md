@@ -484,7 +484,7 @@ This vertical flow is much more intuitive for showing the sequential steps of th
 
 1. **🔍 Autonomous Monitor** continuously watches Kubernetes cluster health
    - Detects pod failures, node issues, resource problems
-   - Monitors every 1 second for real-time response
+   - Monitors every 30 seconds for efficient polling (configurable)
 
 2. **🚨 Issue Detection** triggers when problems are found
    - CrashLoopBackOff pods
