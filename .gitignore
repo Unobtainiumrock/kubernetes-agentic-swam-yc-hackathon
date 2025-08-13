@@ -49,10 +49,29 @@ Thumbs.db
 *.tmp
 *.temp
 *.log
+*.pid
+*.sock
+
+# Development tracking files
+issues_tracker.txt
+
+# Container runtime files
+.containerenv
 
 # Node modules (frontend dependencies)
 node_modules/
 frontend/node_modules/
+
+# Frontend build artifacts
+frontend/dist/
+frontend/build/
+frontend/.netlify/
+
+# NPM cache and logs (generated in containers)
+.npm/
+
+# K9s state and logs (generated in containers)
+.local/state/
 
 # Helm cache
 .helm/
