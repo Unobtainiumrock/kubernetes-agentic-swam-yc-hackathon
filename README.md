@@ -369,23 +369,6 @@ graph TB
     class Kind,OpenRouter external
 ```
 
-### **🎯 Container-First Benefits**
-
-**✅ Complete Isolation:**
-- No host dependencies except Docker
-- Consistent environment across all machines
-- No "works on my machine" issues
-
-**✅ Development Efficiency:**
-- Hot reloading for both frontend and backend
-- All tools pre-installed and configured
-- Single command setup and teardown
-
-**✅ Production Similarity:**
-- Same containerized approach as production
-- Kubernetes tools exactly as deployed
-- Realistic networking and resource constraints
-
 ## 🏗️ Unified Backend Architecture
 
 The system has been consolidated into a single, unified backend structure for simplicity and maintainability:
@@ -427,22 +410,6 @@ flowchart TD
     class C,D,E agents
     class F,G k8s
 ```
-
-### **🎯 Benefits of Unified Architecture**
-
-**✅ Simplified:**
-- Single FastAPI application instead of multiple services
-- Consistent import paths and configuration
-- Container-first development workflow
-
-**✅ Maintainable:**
-- All functionality in one place
-- No duplicate API implementations
-- Unified error handling and logging
-
-**✅ Scalable:**
-- Clean separation between API endpoints, agents, and services
-- Easy to add new investigation types or monitoring features
 
 ## 🔄 Autonomous Investigation & Report Flow
 
@@ -585,17 +552,6 @@ The demo cluster includes:
 | **Cluster Config** | `kind-cluster-config.yaml` | Nodes, labels, networking |
 | **Demo Apps** | `scripts/deploy-demo-apps.sh` | Add services, databases, monitoring |
 | **Chaos Scenarios** | `scripts/chaos-scenarios.sh` | Custom failure patterns |
-
-## 🤝 Sharing and Replication
-
-This entire setup is designed to be easily shared and replicated:
-
-1. **Clone this repository**
-2. **Ensure Docker is running**
-3. **Set up .env file** with your OpenRouter API key
-4. **Run the demo** - `make setup-cluster && make deploy-demo-apps && make start-fullstack`
-
-The pure container-first approach ensures consistent environments across different machines and users. No complex setup required!
 
 ---
 
