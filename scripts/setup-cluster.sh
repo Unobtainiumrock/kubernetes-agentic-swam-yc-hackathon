@@ -155,9 +155,12 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     # Setup k8sgpt with OpenRouter via OpenAI-compatible endpoint
     echo "Configuring k8sgpt to use OpenRouter API via OpenAI backend..."
     if [ -n "$OPENROUTER_API_KEY" ]; then
-        # Use openai backend but point to OpenRouter's endpoint
-        k8sgpt auth add openrouter -b openai -m gpt-4 -k "$OPENROUTER_API_KEY" -u "https://openrouter.ai/api/v1"
-        k8sgpt auth default -p openrouter
+        # Remove existing openai provider if it exists
+        k8sgpt auth remove -p openai 2>/dev/null || true
+        
+        # Add openai backend pointing to OpenRouter's endpoint
+        k8sgpt auth add openai -b openai -m gpt-4 -k "$OPENROUTER_API_KEY" -u "https://openrouter.ai/api/v1"
+        k8sgpt auth default -p openai
         echo "✅ K8sgpt configured with OpenRouter (via OpenAI backend)"
     else
         echo "⚠️  OPENROUTER_API_KEY not set, k8sgpt will run without AI explanations"

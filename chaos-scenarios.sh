@@ -1,1 +1,0 @@
-scripts/chaos-scenarios.sh

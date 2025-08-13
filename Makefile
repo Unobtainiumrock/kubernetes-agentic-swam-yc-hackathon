@@ -174,7 +174,7 @@ chaos-recovery: build-local
 dev-up: build-local
 	@echo "🚀 Starting development stack (hybrid approach)..."
 	@echo "📋 This will start using host + container hybrid"
-	@echo "   Run: ./start-fullstack.sh"
+	@echo "   Run: make start-fullstack"
 
 # Clean up everything - Full stack shutdown
 clean:
@@ -249,8 +249,8 @@ help:
 	@echo "  make chaos-recovery     - Fix all chaos issues (container)"
 	@echo ""
 	@echo "🔧 Alternative Commands:"
-	@echo "  ./start-fullstack.sh         - Hybrid approach (host + container)"
-	@echo "  ./chaos-scenarios.sh         - Manual chaos engineering"
-	@echo "  ./scripts/setup-cluster.sh   - Direct script (requires host tools)"
+	@echo "  make start-fullstack         - Pure container-first approach"
+	@echo "  make chaos                   - Chaos engineering scenarios"
+	@echo "  make setup-cluster           - Kubernetes cluster setup"
 
 .PHONY: build build-local run run-local exec exec-user run-local-with-stack start-fullstack dev-up clean clean-containers push help chaos chaos-pods chaos-images chaos-crashes chaos-recovery
