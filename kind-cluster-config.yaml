@@ -32,7 +32,6 @@ nodes:
     labels:
       tier: frontend
       zone: us-west-1a
-  
   - role: worker
     labels:
       tier: backend
